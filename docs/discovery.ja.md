@@ -6,9 +6,11 @@
 
 ## 現在の動作
 
-`PathLister` がadapter contractである。`List` methodは入力pathを受け取り、共変更証拠、解決した対象path、errorを返す。`discoverWithLister` はadapterを呼び、証拠と対象pathを `analyzeCandidates` 経由で `/analysis` に渡す。
+CLIは `--discovery git`、`--discovery document`、`--discovery both` をサポートする。`both` は独立した両方式を並行実行し、channelで結果を回収してrepository-relative pathで候補を統合し、各方式の証拠を保持する。方式の一致によるscore変更はまだ行わず、比較・評価用とする。エラーには失敗した方式名を含める。
 
-既定の `discover` は現在 `GitPathLister` を選ぶ。interfaceにより別の証拠取得元を注入できるが、Git以外のlisterは未実装である。また、現在のcontractはGit形式の共変更証拠を返す。他の証拠形式へ広げるにはmodelの明示的な設計が必要になる。
+`DocumentPathLister` は文書拡張子に応じて形式別extractorを選ぶ。Markdown/MDXとreStructuredTextに対応し、リンク、インラインコード/literal、強調/roleを抽出する。ローカルパスは直接解決し、強調またはコード表記の語句はコードファイル名とソース内容で照合する。意味上の言い換えは推論しない。
+
+文書探索ではリポジトリを一度だけ走査してsource indexを作る。source fileは上限付きworker poolで読み込み、抽出語句はメモリ上のindexに照合する。語句ごとにリポジトリ全体を再走査・再読込することを避ける。
 
 ## 関連path
 

@@ -6,9 +6,11 @@
 
 ## Current behavior
 
-`PathLister` is the adapter contract. Its `List` method accepts the input path and returns co-change evidence, the resolved target path, and an error. `discoverWithLister` invokes the adapter and passes its evidence and target to `/analysis` through `analyzeCandidates`.
+The CLI supports `--discovery git`, `--discovery document`, and `--discovery both`. `both` runs the two independent methods concurrently, collects their results through a channel, and merges candidates by repository-relative path while retaining evidence from each method. It does not yet alter scores when methods agree; this mode is for comparison and evaluation. Errors identify which method failed.
 
-The default `discover` currently chooses `GitPathLister`. The interface permits another evidence source to be supplied, but no non-Git lister is currently implemented. The contract currently returns Git-shaped co-change evidence; broadening it for other evidence types would require an explicit model decision.
+`DocumentPathLister` dispatches by document extension to a format extractor. Markdown/MDX and reStructuredText are supported. Extractors recognize links, inline code/literals, and emphasis/roles. Explicit local paths resolve directly; emphasized or code-formatted terms are matched against code file names and source contents. This is deliberately literal and does not infer semantic equivalents.
+
+Document search walks the repository once to build a source index. Source files are read by a bounded worker pool, then all extracted terms are matched against the in-memory index. This avoids rescanning and rereading the repository once per term.
 
 ## Related paths
 

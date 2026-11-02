@@ -8,7 +8,7 @@
 
 現行実装は、リポジトリ相対path、対象と同時に変更されたcommitの集合、commit messageから得たノイズ情報を持つ `cochangeEvidence` を受け取る。`analyzeCandidates` は各証拠から候補を作る。
 
-scoreは共変更commit数とfilenameの類似bonusの合計である。bonusは出力でも別に示す。候補はcodeまたはdocumentに分類し、filenameやdirectoryの慣習からtestらしいpathを判定する。noise termとその累積scoreも証拠として保持するが、順位づけやfilterには使わない。
+scoreは共変更commit数とfilenameの類似bonusの合計である。noise scoreは別に管理する。commit messageのsignalは小さく加点し、benchmark/performance系pathなどの内蔵ルールは大きく加点する。既定noise thresholdを超える候補は隠し、`--show-noisy` で含められる。`--max-noise-score` でthresholdを変えられる。noise ruleは利用者のinclude/exclude filterとは独立して追加できる。
 
 これらはGit由来の証拠に対するheuristicであり、scoreはsemanticな関係を確定しない。現在の実装はsourceの意味解析やLLMを利用しない。
 

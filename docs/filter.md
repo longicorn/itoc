@@ -6,7 +6,7 @@
 
 ## Current behavior
 
-`prepareCandidates` applies stages in this order: extension/path include and exclude filters; exact candidate or group exclusions; minimum score; descending score sort with path as a stable tie-break; and the per-group limit. A limit of zero means unlimited. Group membership is implementation, document, or test, with test-like candidates separated from other code candidates.
+`prepareCandidates` applies extension/path filters, candidate/group exclusions, the noise threshold, minimum score, sorting, and per-group limit. Noisy candidates are hidden by default when their score is above 1; `--max-noise-score` changes the threshold and `--show-noisy` includes all candidates. A limit of zero means unlimited.
 
 Plain path filters match a substring of the repository-relative path. Patterns containing glob metacharacters match the full path using Go `filepath.Match` syntax; `*` does not cross `/`. Extension filters compare lower-case extensions. `--exclude-candidate` accepts a group name or an exact repository-relative candidate path.
 

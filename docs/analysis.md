@@ -8,7 +8,7 @@
 
 The current implementation receives `cochangeEvidence` records containing a repository-relative path, the set of commits that changed the path with the target, and noise evidence derived from commit messages. `analyzeCandidates` creates a candidate for each record.
 
-The score is the number of co-changing commits plus a filename similarity bonus. The bonus compares path filename tokens and is exposed separately in output. Candidates are classified as code or document; test-like paths are identified using filename and directory conventions. Noise terms and their accumulated score are retained as evidence, but do not affect ranking or filtering.
+The score is the number of co-changing commits plus a filename similarity bonus. Noise score is separate: commit-message signals add small values, while built-in path rules such as benchmark/performance paths add a high value. Candidates above the default noise threshold are hidden; `--show-noisy` includes them, and `--max-noise-score` changes the threshold. Noise rules can be extended independently of user include/exclude filters.
 
 These are heuristics over Git-derived evidence. A score does not establish a semantic relationship. The present implementation does not inspect source semantics or use an LLM.
 
