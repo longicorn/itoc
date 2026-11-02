@@ -2,15 +2,15 @@
 
 ## Overview
 
-`itoc` is a dedicated tool for discovering and maintaining relationships between intent-bearing artifacts and implementation artifacts. Its name combines `ito` (意図, intent, evoking the Japanese word for thread) with code: “ito to code” and “ito + code.” The tool addresses a practical traceability problem that is especially visible in Nagi, while also applying to software development more broadly.
+`itoc` is a dedicated tool for discovering and maintaining relationships between intent-bearing artifacts and implementation artifacts. Its name combines `ito` (意図, intent, evoking the Japanese word for thread) with code: “ito to code” and “ito + code.” The tool addresses a practical traceability problem across software development.
 
 ## Problem
 
-Nagi resolves code from semantic paths, but the discovery process currently relies on AI-driven exploration. Relying on non-deterministic AI reasoning alone makes it difficult to reproduce, explain, and consistently reuse how relevant code was found. AI assistance remains valuable, but by itself it leaves too much uncertainty and repeated exploration.
+Development tools may resolve code from semantic paths using AI-driven exploration. Relying on non-deterministic AI reasoning alone makes it difficult to reproduce, explain, and consistently reuse how relevant code was found. AI assistance remains valuable, but by itself it leaves too much uncertainty and repeated exploration.
 
-The underlying cost predates Nagi. Developers often have to reconstruct which implementation, tests, and related artifacts correspond to a document or feature. This work is an implicit, recurring cost, and there has not been a broadly effective way to preserve and recover these relationships.
+Developers often have to reconstruct which implementation, tests, and related artifacts correspond to a document or feature. This work is an implicit, recurring cost, and there has not been a broadly effective way to preserve and recover these relationships.
 
-Nagi's planned Reverse Sync makes the need more immediate. Reverse Sync must reason from existing code toward intent. It may need to follow relationships from one code artifact to other related code and use those relationships to help extract semantic information. Reliable relationship discovery can support both Forward development and this future Reverse work.
+Reverse workflows make the need more immediate. They must reason from existing code toward intent, follow relationships from one code artifact to related code, and use those relationships to help extract semantic information. Reliable relationship discovery can support both Forward development and Reverse work.
 
 ## Product Direction
 
@@ -36,7 +36,7 @@ Potential signals include commit messages and comments, change shape, file moves
 
 ## Future Direction
 
-As Nagi adds Reverse Sync, `itoc` may help start from code, discover related code artifacts, and support semantic extraction from the resulting evidence. The same relationship model may eventually cover documents, source code, tests, decisions, and other development artifacts in both Forward and Reverse workflows.
+In Reverse workflows, `itoc` may help start from code, discover related code artifacts, and support semantic extraction from the resulting evidence. The same relationship model may eventually cover documents, source code, tests, decisions, and other development artifacts in both Forward and Reverse workflows.
 
 ## Principles
 

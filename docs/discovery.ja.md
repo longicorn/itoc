@@ -6,7 +6,7 @@
 
 ## 現在の動作
 
-CLIは `--discovery git`、`--discovery document`、`--discovery both` をサポートする。`both` は独立した両方式を並行実行し、channelで結果を回収してrepository-relative pathで候補を統合し、各方式の証拠を保持する。方式の一致によるscore変更はまだ行わず、比較・評価用とする。エラーには失敗した方式名を含める。
+CLIは方式名のカンマ区切り、または `all` を受け取る。利用可能な実装の唯一の登録元を方式registryとし、`all` は登録済み方式をすべて選ぶ。指定方式を並行実行し、repository-relative pathで結果を統合して各方式の証拠を保持する。同じ候補を見つけた追加方式ごとに暫定+1一致bonusを加える。確率として較正した値ではなく、今後評価する初期heuristicである。エラーには失敗した方式名を含める。
 
 `DocumentPathLister` は文書拡張子に応じて形式別extractorを選ぶ。Markdown/MDXとreStructuredTextに対応し、リンク、インラインコード/literal、強調/roleを抽出する。ローカルパスは直接解決し、強調またはコード表記の語句はコードファイル名とソース内容で照合する。意味上の言い換えは推論しない。
 

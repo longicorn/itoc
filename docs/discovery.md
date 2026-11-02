@@ -6,7 +6,7 @@
 
 ## Current behavior
 
-The CLI supports `--discovery git`, `--discovery document`, and `--discovery both`. `both` runs the two independent methods concurrently, collects their results through a channel, and merges candidates by repository-relative path while retaining evidence from each method. It does not yet alter scores when methods agree; this mode is for comparison and evaluation. Errors identify which method failed.
+The CLI accepts one or more comma-separated method names, or `all`. The method registry is the single source for available implementations; `all` selects every registered method. Selected methods run concurrently, and results are merged by repository-relative path with evidence retained. Each additional method finding the same candidate adds a provisional +1 agreement bonus. This is an initial heuristic to evaluate, not a calibrated probability. Errors identify which method failed.
 
 `DocumentPathLister` dispatches by document extension to a format extractor. Markdown/MDX and reStructuredText are supported. Extractors recognize links, inline code/literals, and emphasis/roles. Explicit local paths resolve directly; emphasized or code-formatted terms are matched against code file names and source contents. This is deliberately literal and does not infer semantic equivalents.
 
