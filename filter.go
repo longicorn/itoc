@@ -2,6 +2,7 @@ package main
 
 import (
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -91,4 +92,36 @@ func filterCandidates(cs []candidate, includeExt, excludeExt, includePath, exclu
 		out = append(out, c)
 	}
 	return out
+}
+
+// sortCandidates orders higher scoring candidates first, with a stable path tie-break.
+func sortCandidates(cs []candidate) []candidate {
+	sort.Slice(cs, func(i, j int) bool {
+		if cs[i].score != cs[j].score {
+			return cs[i].score > cs[j].score
+		}
+		return cs[i].path < cs[j].path
+	})
+	return cs
+}
+
+type candidateOptions struct {
+	includeExt, excludeExt   []string
+	includePath, excludePath []string
+	excludeCandidate         []string
+	minScore, limit          int
+}
+
+// prepareCandidates applies selection stages, ordering before the final limit.
+func prepareCandidates(cs []candidate, options candidateOptions) []candidate {
+	cs = filterCandidates(cs, options.includeExt, options.excludeExt, options.includePath, options.excludePath)
+	cs = excludeExactCandidates(cs, options.excludeCandidate)
+	if options.minScore > 0 {
+		cs = filterMinScore(cs, options.minScore)
+	}
+	cs = sortCandidates(cs)
+	if options.limit > 0 {
+		cs = limitCandidates(cs, options.limit)
+	}
+	return cs
 }

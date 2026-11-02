@@ -76,14 +76,11 @@ func main() {
 	if err != nil {
 		fatal(err.Error())
 	}
-	out = filterCandidates(out, includeExt, excludeExt, includePath, excludePath)
-	out = excludeExactCandidates(out, excludeCandidate)
-	if *minScore > 0 {
-		out = filterMinScore(out, *minScore)
-	}
-	if *limit > 0 {
-		out = limitCandidates(out, *limit)
-	}
+	out = prepareCandidates(out, candidateOptions{
+		includeExt: includeExt, excludeExt: excludeExt,
+		includePath: includePath, excludePath: excludePath,
+		excludeCandidate: excludeCandidate, minScore: *minScore, limit: *limit,
+	})
 	if *format == "json" {
 		printJSON(out)
 		return

@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 )
 
@@ -100,12 +99,7 @@ func discover(input string) ([]candidate, error) {
 	for _, c := range cs {
 		out = append(out, *c)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].score != out[j].score {
-			return out[i].score > out[j].score
-		}
-		return out[i].path < out[j].path
-	})
+
 	return out, nil
 }
 
