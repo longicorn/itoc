@@ -2,7 +2,7 @@
 
 `itoc` は、意図とコードの関係を見つけるためのツールです。名前には **ito**（意図。日本語の「糸」も想起させます）と **code** を組み合わせ、「ito to code」「ito + code」の意味を込めています。
 
-主な目的は [Nagi](https://github.com/longicorn/nagi) で使うことです。特に、semantic pathからコードを探す処理を、より再現可能で説明しやすくすることを目指します。一方、このトレーサビリティの課題はソフトウェア開発全般にもあるため、`itoc` 単独でも使えるツールを目指します。
+`itoc` は、意図を記した文書からコードを探す処理を、より再現可能で説明しやすくすることを目指します。このトレーサビリティの課題はソフトウェア開発全般にあるため、単独でも使えるツールとして開発しています。
 
 初期段階ではForward開発を対象に、Git履歴などの証拠から、commitされた文書に対応する実装コードを探します。決定論的な証拠を中心にし、AIは解釈や曖昧なケースの補助に使います。結果には根拠と不確実性を示します。
 
@@ -45,5 +45,14 @@ filterは複数回指定できます。
 ./itoc --exclude-path vendor --exclude-ext .md docs/cli/adr.md
 ./itoc --exclude-candidate internal/router_test.go docs/cli/adr.md
 ```
+
+探索方式は `--discovery git`（既定）、`--discovery git,document` のようなカンマ区切り、または `--discovery all` で指定できます。指定した方式を並行実行して候補と根拠を統合し、追加の方式でも見つかった候補には方式ごとに暫定で1点加算します。`all` は登録済みのすべての方式を実行します。文書探索はMarkdown/MDXとreStructuredTextに対応し、ローカルリンク、インラインコード、強調語を文字どおりの手掛かりとして使います。
+
+```sh
+./itoc --discovery document docs/cli/adr.md
+```
+
+文書探索は意味上の言い換えを推論しません。一致したパス、ファイル名、ソース本文と文書行の詳細は `--verbose` で表示します。
+内蔵ノイズルールにより、noise scoreが1を超える候補は既定で隠します。`--show-noisy` ですべて含めるか、`--max-noise-score N` でthresholdを変更できます。
 
 glob記号を含まない`--include-path`と`--exclude-path`は、リポジトリ相対pathの部分一致です。globを含む場合はGoの`filepath.Match`形式でpath全体に照合します（`*`は`/`をまたぎません）。`--exclude-candidate`は`implementation`・`document`・`test`の候補group全体、またはrepository-relative pathが完全一致する個別候補を非表示にします。すべてのoptionは`./itoc --help`で確認できます。

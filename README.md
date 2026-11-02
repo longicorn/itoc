@@ -2,7 +2,7 @@
 
 `itoc` helps discover relationships between intent and code. Its name combines **ito** (意図, “intent,” while also evoking 糸, “thread”) and **code**: “ito to code” / “ito + code.”
 
-The primary goal is to support [Nagi](https://github.com/longicorn/nagi), especially by making code discovery from semantic paths more reproducible and explainable. The underlying traceability problem also affects software development more broadly, so `itoc` aims to be useful as a standalone tool as well.
+`itoc` aims to make code discovery from intent-bearing documents more reproducible and explainable. This traceability problem affects software development broadly, so the tool is designed to be useful on its own.
 
 The initial focus is Forward development: use Git history and related evidence to find implementation code for a committed document. Deterministic evidence is central; AI can assist with interpretation and ambiguous cases, with results showing their rationale and uncertainty.
 
@@ -45,5 +45,14 @@ Use repeatable filters to narrow results:
 ./itoc --exclude-path vendor --exclude-ext .md docs/cli/adr.md
 ./itoc --exclude-candidate internal/router_test.go docs/cli/adr.md
 ```
+
+Select discovery methods with `--discovery git` (default), a comma-separated list such as `--discovery git,document`, or `--discovery all`. Selected methods run concurrently and merge candidates while retaining their evidence; each additional method that finds a candidate adds one provisional point. `all` runs every registered method. Document discovery supports Markdown/MDX and reStructuredText, using explicit local links, inline code, and emphasized terms as literal clues:
+
+```sh
+./itoc --discovery document docs/cli/adr.md
+```
+
+Document mode does not infer semantic equivalents. Use `--verbose` to show the matching path, filename, or source-text evidence and its document line.
+Built-in noise rules hide candidates with a noise score above 1 by default. Use `--show-noisy` to include them, or `--max-noise-score N` to set a different threshold.
 
 Plain `--include-path` and `--exclude-path` values match anywhere in a repository-relative path. Glob patterns match the full path using Go's `filepath.Match` syntax (`*` does not cross `/`). `--exclude-candidate` hides a whole group (`implementation`, `document`, or `test`) or an exact repository-relative candidate path. Run `./itoc --help` for all options.
