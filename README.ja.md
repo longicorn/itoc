@@ -8,6 +8,19 @@
 
 現在の方針は[製品要求仕様書](docs/prd.md)を参照してください。
 
+## component document
+
+各semantic pathが担当する現行実装については、以下を参照してください。
+
+- [`/analysis`](docs/analysis.ja.md)
+- [`/cli`](docs/cli.ja.md)
+- [`/discovery`](docs/discovery.ja.md)
+- [`/discovery/git`](docs/discovery/git.ja.md)
+- [`/filter`](docs/filter.ja.md)
+- [`/output`](docs/output.ja.md)
+
+各ページでは現行の動作と製品全体の将来方針を区別しています。全体方針は[製品要求仕様書](docs/prd.ja.md)を参照してください。
+
 ## 使い方
 
 GoでCLIをビルドします。
