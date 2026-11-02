@@ -31,3 +31,20 @@ func TestParseCLIOptionsAndValidation(t *testing.T) {
 		t.Fatalf("validation error=%v", err)
 	}
 }
+
+func TestParseDiscoveryMethods(t *testing.T) {
+	methods, err := parseDiscoveryMethods(" git, document,git ")
+	if err != nil || len(methods) != 2 || methods[0] != "git" || methods[1] != "document" {
+		t.Fatalf("methods=%v err=%v", methods, err)
+	}
+	all, err := parseDiscoveryMethods("all")
+	if err != nil || len(all) != len(discoveryRegistry) {
+		t.Fatalf("all=%v err=%v", all, err)
+	}
+	if _, err := parseDiscoveryMethods("git,unknown"); err == nil {
+		t.Fatal("expected unknown method error")
+	}
+	if _, err := parseDiscoveryMethods("git,"); err == nil {
+		t.Fatal("expected empty method error")
+	}
+}

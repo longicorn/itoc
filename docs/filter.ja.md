@@ -6,7 +6,7 @@
 
 ## 現在の動作
 
-`prepareCandidates` は次の順に処理する。extension/pathのinclude・exclude、候補またはgroupの完全一致除外、最低score、score降順（同点はpath順）のsort、groupごとの件数制限。limit 0は無制限を意味する。groupはimplementation、document、testであり、testらしい候補は他のcode候補から分ける。
+`prepareCandidates` はextension/path filter、候補/group除外、noise threshold、最低score、sort、groupごとの件数制限を適用する。noise scoreが既定値1を超える候補は隠す。`--max-noise-score` でthresholdを変え、`--show-noisy` ですべての候補を含められる。limit 0は無制限。
 
 通常のpath filterはrepository相対pathの部分一致である。glob記号を含むpatternはGoの `filepath.Match` syntaxでpath全体に照合し、`*` は `/` をまたがない。extension filterは小文字化したextensionを比較する。`--exclude-candidate` はgroup名または完全一致するrepository相対candidate pathを受け取る。
 

@@ -6,7 +6,7 @@
 
 ## Current behavior
 
-`renderCandidates` selects text or JSON rendering. Text output groups candidates under implementation, test, and document headings, and shows path, score, noise score, co-change commit count, filename bonus, and available noise terms. Empty text output says that no code candidates were found.
+`renderCandidates` selects text or JSON rendering. Text output groups candidates under implementation, test, and document headings. Detailed evidence strings, including co-change commit IDs and document references, are hidden by default and shown with `--verbose`. Empty text output says that no code candidates were found.
 
 JSON output is an array of candidate records with path, score, co-changed commit count, filename bonus, kind, noise score, and optional noise terms. Test-like candidates have kind `test`. The CLI writes rendered bytes to stdout; output-file support is not currently implemented.
 

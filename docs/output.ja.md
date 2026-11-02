@@ -6,7 +6,7 @@
 
 ## 現在の動作
 
-`renderCandidates` はtextまたはJSON形式を選ぶ。text出力はimplementation、test、documentの見出しで候補を分け、path、score、noise score、共変更commit数、filename bonus、取得できたnoise termを表示する。候補が空の場合は該当するmessageを表示する。
+`renderCandidates` はtextまたはJSON形式を選ぶ。text出力はimplementation、test、documentの見出しで候補を分ける。共変更commit IDや文書参照などの詳細証拠は既定で隠し、`--verbose` を指定すると表示する。候補が空の場合は該当するmessageを表示する。
 
 JSON出力はcandidate recordの配列で、path、score、共変更commit数、filename bonus、kind、noise score、任意のnoise termを含む。testらしい候補のkindは `test` となる。CLIはrender済みbyte列をstdoutへ書く。output fileへの保存は未実装である。
 

@@ -6,7 +6,7 @@ Accepted direction; implementation details remain open.
 
 ## Context
 
-`itoc` aims to make relationships between intent-bearing artifacts and implementation artifacts easier to discover and reuse. Nagi currently relies on AI-driven exploration to resolve code from semantic paths. AI can help interpret ambiguous evidence, but AI alone makes discovery difficult to reproduce, explain, and reuse consistently.
+`itoc` aims to make relationships between intent-bearing artifacts and implementation artifacts easier to discover and reuse. Development tools may rely on AI-driven exploration to resolve code from semantic paths. AI can help interpret ambiguous evidence, but AI alone makes discovery difficult to reproduce, explain, and reuse consistently.
 
 The initial use case is Forward development: use committed documents and repository history to find candidate implementation artifacts. Locating related artifacts is distinct from understanding their intent. This ADR focuses on candidate discovery and does not define a complete semantic interpretation system.
 

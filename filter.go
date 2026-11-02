@@ -109,6 +109,9 @@ func sortCandidates(cs []candidate) []candidate {
 func prepareCandidates(cs []candidate, options candidateOptions) []candidate {
 	cs = filterCandidates(cs, options.includeExt, options.excludeExt, options.includePath, options.excludePath)
 	cs = excludeExactCandidates(cs, options.excludeCandidate)
+	if !options.showNoisy {
+		cs = filterMaxNoiseScore(cs, options.maxNoiseScore)
+	}
 	if options.minScore > 0 {
 		cs = filterMinScore(cs, options.minScore)
 	}
@@ -117,4 +120,14 @@ func prepareCandidates(cs []candidate, options candidateOptions) []candidate {
 		cs = limitCandidates(cs, options.limit)
 	}
 	return cs
+}
+
+func filterMaxNoiseScore(cs []candidate, max int) []candidate {
+	out := make([]candidate, 0, len(cs))
+	for _, c := range cs {
+		if c.noiseScore <= max {
+			out = append(out, c)
+		}
+	}
+	return out
 }

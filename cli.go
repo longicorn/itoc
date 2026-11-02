@@ -8,7 +8,9 @@ import (
 )
 
 type cliConfig struct {
-	format string
+	format    string
+	discovery string
+	verbose   bool
 	candidateOptions
 }
 
@@ -17,6 +19,10 @@ func parseCLI(args []string, output io.Writer) (cliConfig, string, error) {
 	fs := flag.NewFlagSet("itoc", flag.ContinueOnError)
 	fs.SetOutput(output)
 	fs.StringVar(&config.format, "format", "text", "output format: text or json")
+	fs.StringVar(&config.discovery, "discovery", "git", "comma-separated discovery methods or all")
+	fs.BoolVar(&config.verbose, "verbose", false, "show evidence details")
+	fs.IntVar(&config.maxNoiseScore, "max-noise-score", 1, "hide candidates above this noise score")
+	fs.BoolVar(&config.showNoisy, "show-noisy", false, "include candidates hidden by the noise threshold")
 	fs.IntVar(&config.limit, "limit", 10, "maximum candidates per group (0 means unlimited)")
 	fs.IntVar(&config.minScore, "min-score", 0, "minimum candidate score (0 disables score filtering)")
 	fs.Var((*stringList)(&config.includeExt), "include-ext", "candidate extension allowlist (repeatable, e.g. .go)")
@@ -34,11 +40,17 @@ func parseCLI(args []string, output io.Writer) (cliConfig, string, error) {
 	if config.format != "text" && config.format != "json" {
 		return config, "", fmt.Errorf("unsupported format: %s", config.format)
 	}
+	if _, err := parseDiscoveryMethods(config.discovery); err != nil {
+		return config, "", err
+	}
 	if config.limit < 0 {
 		return config, "", errors.New("limit must be zero or greater")
 	}
 	if config.minScore < 0 {
 		return config, "", errors.New("min-score must be zero or greater")
+	}
+	if config.maxNoiseScore < 0 {
+		return config, "", errors.New("max-noise-score must be zero or greater")
 	}
 	return config, fs.Arg(0), nil
 }
@@ -47,6 +59,10 @@ func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "Usage: itoc [options] <repository-file>")
 	fmt.Fprintln(out, "\nOptions:")
 	fmt.Fprintln(out, "  --format text|json          Output format (default: text)")
+	fmt.Fprintln(out, "  --discovery METHODS         Comma-separated methods or all (default: git)")
+	fmt.Fprintln(out, "  --verbose                   Show evidence details")
+	fmt.Fprintln(out, "  --max-noise-score N         Hide candidates above noise score (default: 1)")
+	fmt.Fprintln(out, "  --show-noisy                Include candidates hidden by noise rules")
 	fmt.Fprintln(out, "  --limit N                   Maximum candidates per group (default: 10; 0: unlimited)")
 	fmt.Fprintln(out, "  --min-score N               Minimum candidate score (default: 0; disabled)")
 	fmt.Fprintln(out, "  --exclude-candidate PATH    Hide a group (implementation/document/test) or exact repository-relative path (repeatable)")

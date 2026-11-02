@@ -108,14 +108,46 @@ func collectCochangeEvidence(target string, commits []commitSnapshot) map[string
 			}
 			seen[p] = true
 			if cs[p] == nil {
-				cs[p] = &cochangeEvidence{path: p, commits: map[string]bool{}}
+				cs[p] = &cochangeEvidence{path: p, commits: map[string]bool{}, discoveries: []string{"git"}}
 			}
 			cs[p].commits[commit.id] = true
-			cs[p].noiseScore += len(terms)
-			for _, term := range terms {
+			cs[p].evidence = appendUnique(cs[p].evidence, "co-changed in commit "+commit.id)
+			allTerms := append(append([]string(nil), terms...), detectPathNoiseTerms(p)...)
+			if score := noiseScoreForTerms(terms); score > cs[p].noiseScore {
+				cs[p].noiseScore = score
+			}
+			if score := noiseScoreForTerms(detectPathNoiseTerms(p)); score > cs[p].noiseScore {
+				cs[p].noiseScore = score
+			}
+			for _, term := range allTerms {
 				cs[p].noiseTerms = appendUnique(cs[p].noiseTerms, term)
 			}
 		}
 	}
 	return cs
+}
+
+func detectPathNoiseTerms(path string) []string {
+	var terms []string
+	for _, part := range strings.Split(strings.ToLower(filepath.ToSlash(path)), "/") {
+		name := strings.TrimSuffix(part, filepath.Ext(part))
+		for _, term := range []string{"benchmark", "benchmarks", "bench", "perf", "performance", "profiling", "profile"} {
+			if name == term || strings.HasPrefix(name, term+"_") || strings.HasSuffix(name, "_"+term) || strings.Contains(name, "_"+term+"_") {
+				terms = appendUnique(terms, "path:"+term)
+			}
+		}
+	}
+	return terms
+}
+
+func noiseScoreForTerms(terms []string) int {
+	score := 0
+	for _, term := range terms {
+		if strings.HasPrefix(term, "path:benchmark") || strings.HasPrefix(term, "path:bench") || strings.HasPrefix(term, "path:perf") || strings.HasPrefix(term, "path:performance") {
+			score += 10
+		} else {
+			score++
+		}
+	}
+	return score
 }
