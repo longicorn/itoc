@@ -8,6 +8,19 @@ The initial focus is Forward development: use Git history and related evidence t
 
 See the [product requirements](docs/prd.md) for the current direction.
 
+## Component documentation
+
+The component pages describe the current implementation behind these semantic paths:
+
+- [`/analysis`](docs/analysis.md)
+- [`/cli`](docs/cli.md)
+- [`/discovery`](docs/discovery.md)
+- [`/discovery/git`](docs/discovery/git.md)
+- [`/filter`](docs/filter.md)
+- [`/output`](docs/output.md)
+
+They distinguish current behavior from broader product direction in the [PRD](docs/prd.md).
+
 ## Usage
 
 Build the CLI with Go:
