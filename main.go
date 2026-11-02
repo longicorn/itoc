@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -80,6 +81,10 @@ func discoverMany(input string, tasks []namedLister) ([]candidate, error) {
 	var errs []string
 	for result := range results {
 		if result.err != nil {
+			var unsupported unsupportedDocumentFormatError
+			if result.mode == "document" && errors.As(result.err, &unsupported) {
+				continue
+			}
 			errs = append(errs, result.mode+": "+result.err.Error())
 			continue
 		}
