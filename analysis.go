@@ -160,3 +160,16 @@ func filenameTokens(name string) map[string]bool {
 	}
 	return out
 }
+
+func analyzeCandidates(target string, evidence []cochangeEvidence) []candidate {
+	out := make([]candidate, 0, len(evidence))
+	for _, e := range evidence {
+		c := candidate{path: e.path, score: len(e.commits), nameBonus: filenameSimilarityBonus(target, e.path), testLike: isTestPath(e.path), noiseScore: e.noiseScore, noiseTerms: e.noiseTerms, commits: e.commits, kind: "code"}
+		c.score += c.nameBonus
+		if isDocument(c.path) {
+			c.kind = "document"
+		}
+		out = append(out, c)
+	}
+	return out
+}
