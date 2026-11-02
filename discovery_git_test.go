@@ -15,8 +15,8 @@ func TestGitPathListerUsesInjectedRunner(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected missing repository error")
 	}
-	if runner.calls != 3 {
-		t.Fatalf("runner calls = %d, want 3", runner.calls)
+	if runner.calls != 2 {
+		t.Fatalf("runner calls = %d, want 2", runner.calls)
 	}
 }
 
@@ -70,16 +70,14 @@ func TestCollectCochangeEvidenceDeduplicatesWithinCommit(t *testing.T) {
 
 func TestResolveGitTargetTrackedAndDeleted(t *testing.T) {
 	runner := scriptedGitRunner{responses: map[string]string{
-		"ls-files --full-name -- docs/a.md":        "docs/a.md\n",
-		"ls-files --full-name -- docs/gone.md":     "",
-		"log --follow --format=%H -- docs/gone.md": "commit\n",
+		"ls-files --full-name -- docs/a.md":    "docs/a.md\n",
+		"ls-files --full-name -- docs/gone.md": "",
 	}}
 	tracked, err := resolveGitTarget("/repo", "/repo", "docs/a.md", GitPathLister{runner: runner})
 	if err != nil || tracked != "docs/a.md" {
 		t.Fatalf("tracked target=%q err=%v", tracked, err)
 	}
-	deleted, err := resolveGitTarget("/repo", "/repo", "docs/gone.md", GitPathLister{runner: runner})
-	if err != nil || deleted != "docs/gone.md" {
-		t.Fatalf("deleted target=%q err=%v", deleted, err)
+	if _, err := resolveGitTarget("/repo", "/repo", "docs/gone.md", GitPathLister{runner: runner}); err == nil || !strings.Contains(err.Error(), "not tracked") {
+		t.Fatalf("deleted target error=%v, want untracked path error", err)
 	}
 }

@@ -26,7 +26,7 @@ The initial scope is intentionally focused on Git-backed discovery. Git evidence
 
 Discovery should distinguish locating artifacts from understanding their intent. The initial goal is primarily to locate candidate implementation artifacts. Deeper interpretation of what the code implements and which intent it serves is a broader need, especially for Reverse Sync, and must retain uncertainty when repository evidence is insufficient.
 
-The initial scope is intentionally focused on Git-backed discovery. It should establish a practical basis for later work on broader artifact types, finer-grained links, and Reverse Sync. Confirmed relationships may eventually be retained and reused across Forward and Reverse work; persistence, freshness, and handling moves, splits, or merges remain open design questions.
+The initial scope is intentionally focused on Git-backed discovery. It should establish a practical basis for later work on broader artifact types, finer-grained links, and Reverse Sync. Confirmed relationships may eventually be retained and reused across Forward and Reverse work; persistence, freshness, and handling splits or merges remain open design questions. For Git-backed discovery, a deleted input path is out of scope; when a target is moved or renamed, discovery should continue from its current destination while following its history.
 
 ## Noise and Evidence Quality
 

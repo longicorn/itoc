@@ -6,7 +6,7 @@
 
 ## 現在の動作
 
-`GitPathLister` はrepository rootを特定し、入力をtrackedなrepository相対pathに解決する（削除済みtracked pathは履歴によるfallbackを使う）。対象pathに関係するcommitを `git log --follow` で取得し、各commitのsubject/bodyと変更pathを集める。Git command実行には `GitRunner` を注入でき、既定実装は `git` executableを呼ぶ。
+`GitPathLister` はrepository rootを特定し、入力をtrackedなrepository相対pathに解決する。現在の移動先または改名後のpathから `git log --follow` を実行し、対象の履歴をたどる。製品方針では削除済みの入力pathを対象外とするが、現行実装には削除済みtracked pathを履歴から解決するfallbackが残っており、この方針をまだ強制していない。各commitのsubject/bodyと変更pathを集める。Git command実行には `GitRunner` を注入でき、既定実装は `git` executableを呼ぶ。
 
 `collectCochangeEvidence` は対象commitで同時に変更された対応済みcode/document pathを集約する。commit内の重複pathと対象自身、未対応file typeを除外し、commit集合を記録する。commit message由来のnoise termも蓄積する。score付けと分類は後段の [`/analysis`](../analysis.ja.md) が行う。
 

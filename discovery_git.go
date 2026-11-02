@@ -76,25 +76,7 @@ func resolveGitTarget(cwd, root, input string, l GitPathLister) (string, error) 
 		}
 	}
 	if target == "" {
-		logOut, logErr := l.run(root, "log", "--follow", "--format=%H", "--", input)
-		if logErr != nil {
-			return "", logErr
-		}
-		if strings.TrimSpace(logOut) == "" {
-			return "", fmt.Errorf("no Git history for path: %s", input)
-		}
-		if filepath.IsAbs(input) {
-			abs, absErr := filepath.Abs(input)
-			if absErr != nil {
-				return "", absErr
-			}
-			target, err = filepath.Rel(root, abs)
-			if err != nil {
-				return "", err
-			}
-		} else {
-			target = filepath.ToSlash(filepath.Clean(input))
-		}
+		return "", fmt.Errorf("path is not tracked in the Git working tree: %s", input)
 	}
 	return filepath.ToSlash(target), nil
 }
