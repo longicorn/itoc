@@ -59,11 +59,37 @@ func (l GitPathLister) List(input string) ([]cochangeEvidence, string, error) {
 	}
 	root := strings.TrimSpace(rootOut)
 
-	// Resolve the user-supplied path through Git instead of deciding repository
-	// containment with filesystem string comparisons.
-	pathOut, err := l.run(cwd, "ls-files", "--full-name", "--", input)
+	target, err := resolveGitTarget(cwd, root, input, l)
 	if err != nil {
 		return nil, "", err
+	}
+
+	log, err := l.run(root, "log", "--follow", "--format=%H", "--", target)
+	if err != nil {
+		return nil, "", err
+	}
+	ids := strings.Fields(log)
+	commits := make([]commitSnapshot, 0, len(ids))
+	for _, id := range ids {
+		message, _ := l.run(root, "show", "-s", "--format=%s%n%b", id)
+		files, err := l.run(root, "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", id)
+		if err != nil {
+			continue
+		}
+		commits = append(commits, commitSnapshot{id: id, message: message, files: files})
+	}
+	cs := collectCochangeEvidence(target, commits)
+	evidence := make([]cochangeEvidence, 0, len(cs))
+	for _, item := range cs {
+		evidence = append(evidence, *item)
+	}
+	return evidence, target, nil
+}
+
+func resolveGitTarget(cwd, root, input string, l GitPathLister) (string, error) {
+	pathOut, err := l.run(cwd, "ls-files", "--full-name", "--", input)
+	if err != nil {
+		return "", err
 	}
 	target := ""
 	for _, p := range strings.Split(strings.TrimSpace(pathOut), "\n") {
@@ -73,63 +99,27 @@ func (l GitPathLister) List(input string) ([]cochangeEvidence, string, error) {
 		}
 	}
 	if target == "" {
-		// Also allow a tracked file that has been deleted from the working tree.
 		logOut, logErr := l.run(root, "log", "--follow", "--format=%H", "--", input)
 		if logErr != nil {
-			return nil, "", logErr
+			return "", logErr
 		}
 		if strings.TrimSpace(logOut) == "" {
-			return nil, "", fmt.Errorf("no Git history for path: %s", input)
+			return "", fmt.Errorf("no Git history for path: %s", input)
 		}
 		if filepath.IsAbs(input) {
 			abs, absErr := filepath.Abs(input)
 			if absErr != nil {
-				return nil, "", absErr
+				return "", absErr
 			}
 			target, err = filepath.Rel(root, abs)
 			if err != nil {
-				return nil, "", err
+				return "", err
 			}
 		} else {
 			target = filepath.ToSlash(filepath.Clean(input))
 		}
 	}
-	target = filepath.ToSlash(target)
-	log, err := l.run(root, "log", "--follow", "--format=%H", "--", target)
-	if err != nil {
-		return nil, "", err
-	}
-	ids := strings.Fields(log)
-	cs := map[string]*cochangeEvidence{}
-	for _, id := range ids {
-		message, _ := l.run(root, "show", "-s", "--format=%s%n%b", id)
-		files, err := l.run(root, "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", id)
-		if err != nil {
-			continue
-		}
-		seen := map[string]bool{}
-		for _, p := range strings.Split(files, "\n") {
-			p = strings.TrimSpace(p)
-			if p == "" || p == target || (!isCode(p) && !isDocument(p)) || seen[p] {
-				continue
-			}
-			seen[p] = true
-			if cs[p] == nil {
-				cs[p] = &cochangeEvidence{path: p, commits: map[string]bool{}}
-			}
-			cs[p].commits[id] = true
-			terms := detectNoiseTerms(message)
-			cs[p].noiseScore += len(terms)
-			for _, term := range terms {
-				cs[p].noiseTerms = appendUnique(cs[p].noiseTerms, term)
-			}
-		}
-	}
-	evidence := make([]cochangeEvidence, 0, len(cs))
-	for _, item := range cs {
-		evidence = append(evidence, *item)
-	}
-	return evidence, target, nil
+	return filepath.ToSlash(target), nil
 }
 
 func git(dir string, args ...string) (string, error) {
@@ -143,4 +133,30 @@ func git(dir string, args ...string) (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+type commitSnapshot struct{ id, message, files string }
+
+func collectCochangeEvidence(target string, commits []commitSnapshot) map[string]*cochangeEvidence {
+	cs := map[string]*cochangeEvidence{}
+	for _, commit := range commits {
+		terms := detectNoiseTerms(commit.message)
+		seen := map[string]bool{}
+		for _, p := range strings.Split(commit.files, "\n") {
+			p = strings.TrimSpace(p)
+			if p == "" || p == target || (!isCode(p) && !isDocument(p)) || seen[p] {
+				continue
+			}
+			seen[p] = true
+			if cs[p] == nil {
+				cs[p] = &cochangeEvidence{path: p, commits: map[string]bool{}}
+			}
+			cs[p].commits[commit.id] = true
+			cs[p].noiseScore += len(terms)
+			for _, term := range terms {
+				cs[p].noiseTerms = appendUnique(cs[p].noiseTerms, term)
+			}
+		}
+	}
+	return cs
 }

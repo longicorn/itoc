@@ -86,3 +86,34 @@ func TestGitPathListerCollectsCochangeEvidence(t *testing.T) {
 		t.Fatalf("alpha evidence=%#v", alpha)
 	}
 }
+
+func TestCollectCochangeEvidenceDeduplicatesWithinCommit(t *testing.T) {
+	commits := []commitSnapshot{
+		{id: "c1", message: "format changes", files: "docs/target.md\nsrc/a.go\nsrc/a.go\nimage.png\n"},
+		{id: "c2", message: "feature", files: "docs/target.md\nsrc/a.go\n"},
+	}
+	got := collectCochangeEvidence("docs/target.md", commits)
+	if len(got) != 1 {
+		t.Fatalf("evidence = %#v, want only source candidate", got)
+	}
+	a := got["src/a.go"]
+	if a == nil || len(a.commits) != 2 || a.noiseScore != 1 || len(a.noiseTerms) != 1 || a.noiseTerms[0] != "format" {
+		t.Fatalf("source evidence = %#v", a)
+	}
+}
+
+func TestResolveGitTargetTrackedAndDeleted(t *testing.T) {
+	runner := scriptedGitRunner{responses: map[string]string{
+		"ls-files --full-name -- docs/a.md":        "docs/a.md\n",
+		"ls-files --full-name -- docs/gone.md":     "",
+		"log --follow --format=%H -- docs/gone.md": "commit\n",
+	}}
+	tracked, err := resolveGitTarget("/repo", "/repo", "docs/a.md", GitPathLister{runner: runner})
+	if err != nil || tracked != "docs/a.md" {
+		t.Fatalf("tracked target=%q err=%v", tracked, err)
+	}
+	deleted, err := resolveGitTarget("/repo", "/repo", "docs/gone.md", GitPathLister{runner: runner})
+	if err != nil || deleted != "docs/gone.md" {
+		t.Fatalf("deleted target=%q err=%v", deleted, err)
+	}
+}
