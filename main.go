@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -30,22 +29,22 @@ type candidate struct {
 }
 
 func main() {
-	config, path, err := parseCLI(os.Args[1:], flag.CommandLine.Output())
-	if err != nil {
+	if err := run(os.Args[1:], os.Stdout, os.Stderr, GitPathLister{}); err != nil {
 		fatal(err.Error())
 	}
-	if path == "" {
-		flag.Usage()
-		os.Exit(2)
-	}
-	cs, err := discover(path)
+}
+
+func run(args []string, stdout, stderr io.Writer, lister PathLister) error {
+	config, path, err := parseCLI(args, stderr)
 	if err != nil {
-		fatal(err.Error())
+		return err
+	}
+	cs, err := discoverWithLister(path, lister)
+	if err != nil {
+		return err
 	}
 	cs = prepareCandidates(cs, config.candidateOptions)
-	if err := writeCandidates(os.Stdout, cs, config.format); err != nil {
-		fatal(err.Error())
-	}
+	return writeCandidates(stdout, cs, config.format)
 }
 
 func fatal(s string) { fmt.Fprintln(os.Stderr, "itoc:", s); os.Exit(1) }
