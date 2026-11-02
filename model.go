@@ -9,6 +9,7 @@ type candidate struct {
 	noiseScore int
 	noiseTerms []string
 	commits    map[string]bool
+	evidence   []string
 }
 
 type cochangeEvidence struct {
@@ -16,6 +17,7 @@ type cochangeEvidence struct {
 	commits    map[string]bool
 	noiseScore int
 	noiseTerms []string
+	evidence   []string
 }
 
 type candidateOptions struct {
@@ -23,4 +25,6 @@ type candidateOptions struct {
 	includePath, excludePath []string
 	excludeCandidate         []string
 	minScore, limit          int
+	maxNoiseScore            int
+	showNoisy                bool
 }

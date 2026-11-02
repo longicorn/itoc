@@ -4,6 +4,13 @@ type PathLister interface {
 	List(input string) ([]cochangeEvidence, string, error)
 }
 
+type discoveryMode string
+
+const (
+	discoveryGit      discoveryMode = "git"
+	discoveryDocument discoveryMode = "document"
+)
+
 func discover(input string) ([]candidate, error) {
 	return discoverWithLister(input, GitPathLister{})
 }
