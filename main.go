@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
@@ -81,27 +82,18 @@ func main() {
 		includePath: includePath, excludePath: excludePath,
 		excludeCandidate: excludeCandidate, minScore: *minScore, limit: *limit,
 	})
-	if *format == "json" {
-		printJSON(out)
-		return
+	if err := writeCandidates(os.Stdout, out, *format); err != nil {
+		fatal(err.Error())
 	}
-	if len(out) == 0 {
-		fmt.Println("No code candidates found.")
-		return
-	}
-	var impl, tests, docs []candidate
-	for _, c := range out {
-		if c.kind == "document" {
-			docs = append(docs, c)
-		} else if c.testLike {
-			tests = append(tests, c)
-		} else {
-			impl = append(impl, c)
-		}
-	}
-	printCandidates("Implementation candidates", impl)
-	printCandidates("Test candidates", tests)
-	printCandidates("Document candidates", docs)
 }
 
 func fatal(s string) { fmt.Fprintln(os.Stderr, "itoc:", s); os.Exit(1) }
+
+func writeCandidates(w io.Writer, cs []candidate, format string) error {
+	data, err := renderCandidates(cs, format)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(data)
+	return err
+}

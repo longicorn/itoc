@@ -1,27 +1,52 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 )
 
-func printCandidates(title string, cs []candidate) {
+func printCandidatesTo(out *bytes.Buffer, title string, cs []candidate) {
 	if len(cs) == 0 {
 		return
 	}
-	fmt.Println(title + ":")
+	fmt.Fprintln(out, title+":")
 	for i, c := range cs {
-		fmt.Printf("%2d. %s (score %d; noise score %d; co-changed in %d commit(s); path bonus %d)", i+1, c.path, c.score, c.noiseScore, len(c.commits), c.nameBonus)
+		fmt.Fprintf(out, "%2d. %s (score %d; noise score %d; co-changed in %d commit(s); path bonus %d)", i+1, c.path, c.score, c.noiseScore, len(c.commits), c.nameBonus)
 		if len(c.noiseTerms) > 0 {
-			fmt.Printf("; noise terms: %s", strings.Join(c.noiseTerms, ", "))
+			fmt.Fprintf(out, "; noise terms: %s", strings.Join(c.noiseTerms, ", "))
 		}
-		fmt.Println()
+		fmt.Fprintln(out)
 	}
 }
 
-func printJSON(cs []candidate) {
+func renderCandidates(cs []candidate, format string) ([]byte, error) {
+	if format == "json" {
+		return renderJSON(cs)
+	}
+	var out bytes.Buffer
+	if len(cs) == 0 {
+		fmt.Fprintln(&out, "No code candidates found.")
+		return out.Bytes(), nil
+	}
+	var impl, tests, docs []candidate
+	for _, c := range cs {
+		if c.kind == "document" {
+			docs = append(docs, c)
+		} else if c.testLike {
+			tests = append(tests, c)
+		} else {
+			impl = append(impl, c)
+		}
+	}
+	printCandidatesTo(&out, "Implementation candidates", impl)
+	printCandidatesTo(&out, "Test candidates", tests)
+	printCandidatesTo(&out, "Document candidates", docs)
+	return out.Bytes(), nil
+}
+
+func renderJSON(cs []candidate) ([]byte, error) {
 	type row struct {
 		Path             string   `json:"path"`
 		Score            int      `json:"score"`
@@ -39,7 +64,9 @@ func printJSON(cs []candidate) {
 		}
 		rows = append(rows, row{c.path, c.score, len(c.commits), c.nameBonus, kind, c.noiseScore, c.noiseTerms})
 	}
-	if err := json.NewEncoder(os.Stdout).Encode(rows); err != nil {
-		fatal(err.Error())
+	var out bytes.Buffer
+	if err := json.NewEncoder(&out).Encode(rows); err != nil {
+		return nil, err
 	}
+	return out.Bytes(), nil
 }
