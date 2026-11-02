@@ -8,6 +8,12 @@ import (
 	"sync"
 )
 
+type unsupportedDocumentFormatError struct{ extension string }
+
+func (e unsupportedDocumentFormatError) Error() string {
+	return "unsupported document format: " + e.extension
+}
+
 type documentHint struct {
 	value  string
 	kind   string
@@ -75,7 +81,7 @@ func (l DocumentPathLister) List(input string) ([]cochangeEvidence, string, erro
 	}
 	extractor := ext[strings.ToLower(filepath.Ext(target))]
 	if extractor == nil {
-		return nil, "", fmt.Errorf("unsupported document format: %s", filepath.Ext(target))
+		return nil, "", unsupportedDocumentFormatError{extension: filepath.Ext(target)}
 	}
 	hints := extractor.Extract(string(content))
 	index, err := buildDocumentSearchIndex(root)
