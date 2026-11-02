@@ -41,13 +41,6 @@ func discoverWithLister(input string, lister PathLister) ([]candidate, error) {
 	return analyzeCandidates(target, evidence), nil
 }
 
-type cochangeEvidence struct {
-	path       string
-	commits    map[string]bool
-	noiseScore int
-	noiseTerms []string
-}
-
 func (l GitPathLister) List(input string) ([]cochangeEvidence, string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {

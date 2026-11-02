@@ -17,17 +17,6 @@ type candidateExcludeFlag []string
 func (f *candidateExcludeFlag) String() string     { return "" }
 func (f *candidateExcludeFlag) Set(v string) error { *f = append(*f, v); return nil }
 
-type candidate struct {
-	path       string
-	score      int
-	nameBonus  int
-	testLike   bool
-	kind       string
-	noiseScore int
-	noiseTerms []string
-	commits    map[string]bool
-}
-
 func main() {
 	if err := run(os.Args[1:], os.Stdout, os.Stderr, GitPathLister{}); err != nil {
 		fatal(err.Error())

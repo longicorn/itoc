@@ -105,13 +105,6 @@ func sortCandidates(cs []candidate) []candidate {
 	return cs
 }
 
-type candidateOptions struct {
-	includeExt, excludeExt   []string
-	includePath, excludePath []string
-	excludeCandidate         []string
-	minScore, limit          int
-}
-
 // prepareCandidates applies selection stages, ordering before the final limit.
 func prepareCandidates(cs []candidate, options candidateOptions) []candidate {
 	cs = filterCandidates(cs, options.includeExt, options.excludeExt, options.includePath, options.excludePath)
