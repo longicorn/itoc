@@ -108,7 +108,7 @@ func collectCochangeEvidence(target string, commits []commitSnapshot) map[string
 			}
 			seen[p] = true
 			if cs[p] == nil {
-				cs[p] = &cochangeEvidence{path: p, commits: map[string]bool{}}
+				cs[p] = &cochangeEvidence{path: p, commits: map[string]bool{}, discoveries: []string{"git"}}
 			}
 			cs[p].commits[commit.id] = true
 			cs[p].evidence = appendUnique(cs[p].evidence, "co-changed in commit "+commit.id)

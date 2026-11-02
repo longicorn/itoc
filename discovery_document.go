@@ -90,7 +90,7 @@ func (l DocumentPathLister) List(input string) ([]cochangeEvidence, string, erro
 				continue
 			}
 			if byPath[match] == nil {
-				byPath[match] = &cochangeEvidence{path: match, commits: map[string]bool{}}
+				byPath[match] = &cochangeEvidence{path: match, commits: map[string]bool{}, discoveries: []string{"document"}}
 			}
 			pathTerms := detectPathNoiseTerms(match)
 			for _, term := range pathTerms {

@@ -29,21 +29,20 @@ func run(args []string, stdout, stderr io.Writer, lister PathLister) error {
 	if err != nil {
 		return err
 	}
+	methods, _ := parseDiscoveryMethods(config.discovery)
+	var tasks []namedLister
+	for _, method := range methods {
+		selected := discoveryRegistry[method]()
+		if method == "git" && lister != nil {
+			selected = lister
+		}
+		tasks = append(tasks, namedLister{name: method, lister: selected})
+	}
 	var cs []candidate
-	switch config.discovery {
-	case "document":
-		cs, err = discoverWithLister(path, NewDocumentPathLister(""))
-	case "both":
-		gitLister := lister
-		if gitLister == nil {
-			gitLister = GitPathLister{}
-		}
-		cs, err = discoverBoth(path, gitLister, NewDocumentPathLister(""))
-	default:
-		if lister == nil {
-			lister = GitPathLister{}
-		}
-		cs, err = discoverWithLister(path, lister)
+	if len(tasks) == 1 {
+		cs, err = discoverWithLister(path, tasks[0].lister)
+	} else {
+		cs, err = discoverMany(path, tasks)
 	}
 	if err != nil {
 		return err
@@ -52,25 +51,27 @@ func run(args []string, stdout, stderr io.Writer, lister PathLister) error {
 	return writeCandidatesWithEvidence(stdout, cs, config.format, config.verbose)
 }
 
+type namedLister struct {
+	name   string
+	lister PathLister
+}
+
 type discoveryResult struct {
 	mode       string
 	candidates []candidate
 	err        error
 }
 
-func discoverBoth(input string, gitLister, documentLister PathLister) ([]candidate, error) {
-	results := make(chan discoveryResult, 2)
+func discoverMany(input string, tasks []namedLister) ([]candidate, error) {
+	results := make(chan discoveryResult, len(tasks))
 	var wg sync.WaitGroup
-	for _, task := range []struct {
-		mode   string
-		lister PathLister
-	}{{"git", gitLister}, {"document", documentLister}} {
+	for _, task := range tasks {
 		task := task
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			cs, err := discoverWithLister(input, task.lister)
-			results <- discoveryResult{mode: task.mode, candidates: cs, err: err}
+			results <- discoveryResult{mode: task.name, candidates: cs, err: err}
 		}()
 	}
 	go func() { wg.Wait(); close(results) }()
@@ -100,7 +101,11 @@ func mergeDiscoveryCandidates(groups ...[]candidate) []candidate {
 				continue
 			}
 			current := byPath[item.path]
+			previousCount := len(current.discoveries)
 			current.commits = mergeCommitSets(current.commits, item.commits)
+			for _, method := range item.discoveries {
+				current.discoveries = appendUnique(current.discoveries, method)
+			}
 			for _, evidence := range item.evidence {
 				current.evidence = appendUnique(current.evidence, evidence)
 			}
@@ -112,6 +117,10 @@ func mergeDiscoveryCandidates(groups ...[]candidate) []candidate {
 			}
 			if item.score > current.score {
 				current.score = item.score
+			}
+			if len(current.discoveries) > previousCount {
+				current.score += len(current.discoveries) - previousCount
+				current.evidence = appendUnique(current.evidence, fmt.Sprintf("independently found by %s discovery methods (+%d agreement bonus)", strings.Join(current.discoveries, ", "), len(current.discoveries)-previousCount))
 			}
 		}
 	}

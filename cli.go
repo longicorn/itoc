@@ -19,7 +19,7 @@ func parseCLI(args []string, output io.Writer) (cliConfig, string, error) {
 	fs := flag.NewFlagSet("itoc", flag.ContinueOnError)
 	fs.SetOutput(output)
 	fs.StringVar(&config.format, "format", "text", "output format: text or json")
-	fs.StringVar(&config.discovery, "discovery", "git", "discovery mode: git, document, or both")
+	fs.StringVar(&config.discovery, "discovery", "git", "comma-separated discovery methods or all")
 	fs.BoolVar(&config.verbose, "verbose", false, "show evidence details")
 	fs.IntVar(&config.maxNoiseScore, "max-noise-score", 1, "hide candidates above this noise score")
 	fs.BoolVar(&config.showNoisy, "show-noisy", false, "include candidates hidden by the noise threshold")
@@ -40,8 +40,8 @@ func parseCLI(args []string, output io.Writer) (cliConfig, string, error) {
 	if config.format != "text" && config.format != "json" {
 		return config, "", fmt.Errorf("unsupported format: %s", config.format)
 	}
-	if config.discovery != "git" && config.discovery != "document" && config.discovery != "both" {
-		return config, "", fmt.Errorf("unsupported discovery mode: %s", config.discovery)
+	if _, err := parseDiscoveryMethods(config.discovery); err != nil {
+		return config, "", err
 	}
 	if config.limit < 0 {
 		return config, "", errors.New("limit must be zero or greater")
@@ -59,7 +59,7 @@ func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "Usage: itoc [options] <repository-file>")
 	fmt.Fprintln(out, "\nOptions:")
 	fmt.Fprintln(out, "  --format text|json          Output format (default: text)")
-	fmt.Fprintln(out, "  --discovery git|document|both Discovery method (default: git)")
+	fmt.Fprintln(out, "  --discovery METHODS         Comma-separated methods or all (default: git)")
 	fmt.Fprintln(out, "  --verbose                   Show evidence details")
 	fmt.Fprintln(out, "  --max-noise-score N         Hide candidates above noise score (default: 1)")
 	fmt.Fprintln(out, "  --show-noisy                Include candidates hidden by noise rules")
