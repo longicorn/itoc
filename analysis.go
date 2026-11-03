@@ -87,7 +87,7 @@ func filenameTokens(name string) map[string]bool {
 	return out
 }
 
-func analyzeCandidates(target string, evidence []cochangeEvidence) []candidate {
+func analyzeCandidates(target string, evidence []discovery.Evidence) []candidate {
 	out := make([]candidate, 0, len(evidence))
 	for _, e := range evidence {
 		c := candidate{path: e.Path, score: len(e.Commits), nameBonus: filenameSimilarityBonus(target, e.Path), testLike: discovery.IsTestPath(e.Path), noiseScore: e.NoiseScore, noiseTerms: e.NoiseTerms, commits: e.Commits, evidence: e.Details, discoveries: e.Methods, kind: "code"}

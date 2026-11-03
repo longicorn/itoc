@@ -1,5 +1,7 @@
 package main
 
+import "itoc/internal/discovery"
+
 import (
 	"bytes"
 	"os"
@@ -11,7 +13,7 @@ import (
 
 type recordingLister struct{ path *string }
 
-func (l recordingLister) List(path string) ([]cochangeEvidence, string, error) {
+func (l recordingLister) List(path string) ([]discovery.Evidence, string, error) {
 	*l.path = path
 	return nil, path, nil
 }

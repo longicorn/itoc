@@ -1,5 +1,7 @@
 package main
 
+import "itoc/internal/discovery"
+
 import (
 	"errors"
 	"fmt"
@@ -21,16 +23,16 @@ func (f *candidateExcludeFlag) String() string     { return "" }
 func (f *candidateExcludeFlag) Set(v string) error { *f = append(*f, v); return nil }
 
 func main() {
-	if err := run(os.Args[1:], os.Stdout, os.Stderr, GitPathLister{}); err != nil {
+	if err := run(os.Args[1:], os.Stdout, os.Stderr, discovery.GitPathLister{}); err != nil {
 		fatal(err.Error())
 	}
 }
 
-func run(args []string, stdout, stderr io.Writer, lister PathLister) error {
+func run(args []string, stdout, stderr io.Writer, lister discovery.PathLister) error {
 	return runWithInput(args, os.Stdin, stdout, stderr, lister)
 }
 
-func runWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer, lister PathLister) error {
+func runWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer, lister discovery.PathLister) error {
 	config, path, err := parseCLI(args, stderr)
 	if err != nil {
 		return err
@@ -67,7 +69,7 @@ func runWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer, list
 		if e != nil {
 			return e
 		}
-		root, e := git(cwd, "rev-parse", "--show-toplevel")
+		root, e := discovery.Git(cwd, "rev-parse", "--show-toplevel")
 		if e != nil {
 			return e
 		}
@@ -86,7 +88,7 @@ func runWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer, list
 
 type namedLister struct {
 	name   string
-	lister PathLister
+	lister discovery.PathLister
 }
 
 type discoveryResult struct {
@@ -113,7 +115,7 @@ func discoverMany(input string, tasks []namedLister) ([]candidate, error) {
 	var errs []string
 	for result := range results {
 		if result.err != nil {
-			var unsupported unsupportedDocumentFormatError
+			var unsupported discovery.UnsupportedDocumentFormatError
 			if result.mode == "document" && errors.As(result.err, &unsupported) {
 				continue
 			}
@@ -141,13 +143,13 @@ func mergeDiscoveryCandidates(groups ...[]candidate) []candidate {
 			previousCount := len(current.discoveries)
 			current.commits = mergeCommitSets(current.commits, item.commits)
 			for _, method := range item.discoveries {
-				current.discoveries = appendUnique(current.discoveries, method)
+				current.discoveries = discovery.AppendUnique(current.discoveries, method)
 			}
 			for _, evidence := range item.evidence {
-				current.evidence = appendUnique(current.evidence, evidence)
+				current.evidence = discovery.AppendUnique(current.evidence, evidence)
 			}
 			for _, term := range item.noiseTerms {
-				current.noiseTerms = appendUnique(current.noiseTerms, term)
+				current.noiseTerms = discovery.AppendUnique(current.noiseTerms, term)
 			}
 			if item.noiseScore > current.noiseScore {
 				current.noiseScore = item.noiseScore
@@ -157,7 +159,7 @@ func mergeDiscoveryCandidates(groups ...[]candidate) []candidate {
 			}
 			if len(current.discoveries) > previousCount {
 				current.score += len(current.discoveries) - previousCount
-				current.evidence = appendUnique(current.evidence, fmt.Sprintf("independently found by %s discovery methods (+%d agreement bonus)", strings.Join(current.discoveries, ", "), len(current.discoveries)-previousCount))
+				current.evidence = discovery.AppendUnique(current.evidence, fmt.Sprintf("independently found by %s discovery methods (+%d agreement bonus)", strings.Join(current.discoveries, ", "), len(current.discoveries)-previousCount))
 			}
 		}
 	}

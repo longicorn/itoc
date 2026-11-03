@@ -23,12 +23,12 @@ func expandTestCandidates(root string, candidates []candidate, ctagsPath string,
 	for _, item := range evidence {
 		c := byPath[item.Path]
 		if c == nil {
-			terms := detectPathNoiseTerms(item.Path)
-			c = &candidate{path: item.Path, kind: "code", testLike: true, commits: map[string]bool{}, noiseTerms: terms, noiseScore: noiseScoreForTerms(terms)}
+			terms := discovery.DetectPathNoiseTerms(item.Path)
+			c = &candidate{path: item.Path, kind: "code", testLike: true, commits: map[string]bool{}, noiseTerms: terms, noiseScore: discovery.NoiseScoreForTerms(terms)}
 			byPath[item.Path] = c
 		}
 		for _, detail := range item.Details {
-			c.evidence = appendUnique(c.evidence, detail)
+			c.evidence = discovery.AppendUnique(c.evidence, detail)
 		}
 	}
 	out := make([]candidate, 0, len(byPath))

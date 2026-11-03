@@ -1,5 +1,7 @@
 package main
 
+import "itoc/internal/discovery"
+
 import (
 	"bytes"
 	"errors"
@@ -11,7 +13,7 @@ import (
 
 func TestRunEndToEndWithInjectedLister(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	lister := fixedPathLister{target: "docs/alpha.md", evidence: []cochangeEvidence{
+	lister := fixedPathLister{target: "docs/alpha.md", evidence: []discovery.Evidence{
 		{Path: "src/alpha.go", Commits: map[string]bool{"c": true}},
 		{Path: "src/beta.go", Commits: map[string]bool{"c": true}},
 	}}
@@ -30,8 +32,8 @@ func TestDiscoverManySkipsUnsupportedDocumentFormat(t *testing.T) {
 	if err := os.WriteFile(input, []byte("class Example; end"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	git := fixedPathLister{target: "doc.rb", evidence: []cochangeEvidence{{Path: "app/example.rb", Commits: map[string]bool{"c": true}}}}
-	got, err := discoverMany(input, []namedLister{{"git", git}, {"document", NewDocumentPathLister(dir)}})
+	git := fixedPathLister{target: "doc.rb", evidence: []discovery.Evidence{{Path: "app/example.rb", Commits: map[string]bool{"c": true}}}}
+	got, err := discoverMany(input, []namedLister{{"git", git}, {"document", discovery.NewDocumentPathLister(dir)}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,8 +48,8 @@ func TestDocumentDiscoveryStillRejectsUnsupportedFormatAlone(t *testing.T) {
 	if err := os.WriteFile(input, []byte("class Example; end"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := discoverWithLister(input, NewDocumentPathLister(dir))
-	var unsupported unsupportedDocumentFormatError
+	_, err := discoverWithLister(input, discovery.NewDocumentPathLister(dir))
+	var unsupported discovery.UnsupportedDocumentFormatError
 	if !errors.As(err, &unsupported) {
 		t.Fatalf("error=%v", err)
 	}

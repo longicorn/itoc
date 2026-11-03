@@ -1,5 +1,7 @@
 package main
 
+import "itoc/internal/discovery"
+
 import (
 	"os"
 	"path/filepath"
@@ -15,7 +17,7 @@ func TestDocumentEvidenceRecordsMatchTypesAndFrequency(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	evidence, _, err := NewDocumentPathLister(root).List(filepath.Join(root, "guide.md"))
+	evidence, _, err := discovery.NewDocumentPathLister(root).List(filepath.Join(root, "guide.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
