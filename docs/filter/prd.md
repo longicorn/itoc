@@ -10,7 +10,7 @@ Filtering prepares discovered candidates for presentation, allowing users to foc
 - Allow users to control the noise threshold and minimum candidate score.
 - Rank candidates and apply a configurable limit per group.
 
-Candidate scores and classifications are defined by [analysis](../analysis/prd.md), options by [CLI](../cli/prd.md), and presentation by [output](../output.md).
+Candidate scores and classifications are defined by [analysis](../analysis/prd.md), options by [CLI](../cli/prd.md), and presentation by [output](../output/prd.md).
 
 ## Current behavior
 

@@ -8,7 +8,7 @@ Analysis turns discovery evidence into ranked, classified candidate artifacts. I
 
 Interpret discovery evidence as support for candidates, not as proof of semantic relationships. Preserve inspectable evidence and avoid presenting candidates as confirmed links. The [product PRD](../prd.md) describes the broader goals for evidence and uncertainty.
 
-Candidate preparation and rendering are addressed by [filter](../filter/prd.md) and [output](../output.md).
+Candidate preparation and rendering are addressed by [filter](../filter/prd.md) and [output](../output/prd.md).
 
 ## Current implementation
 
