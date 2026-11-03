@@ -27,9 +27,22 @@ func main() {
 }
 
 func run(args []string, stdout, stderr io.Writer, lister PathLister) error {
+	return runWithInput(args, os.Stdin, stdout, stderr, lister)
+}
+
+func runWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer, lister PathLister) error {
 	config, path, err := parseCLI(args, stderr)
 	if err != nil {
 		return err
+	}
+	if config.search != "" {
+		path, err = searchKeyword(config.search, stdin, stderr)
+		if err != nil {
+			return err
+		}
+		if path == "" {
+			return nil
+		}
 	}
 	methods, _ := parseDiscoveryMethods(config.discovery)
 	var tasks []namedLister
