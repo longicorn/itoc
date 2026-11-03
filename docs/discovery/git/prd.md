@@ -12,7 +12,7 @@ A deleted input path is out of scope. When a target is moved or renamed, discove
 
 ## Current implementation
 
-The Git-backed adapter resolves the repository root and tracked repository-relative target, follows its history with `git log --follow`, and collects commit messages and changed paths. Git command execution is injectable; the default invokes the `git` executable. Scoring and classification are handled by [analysis](../../analysis.md).
+The Git-backed adapter resolves the repository root and tracked repository-relative target, follows its history with `git log --follow`, and collects commit messages and changed paths. Git command execution is injectable; the default invokes the `git` executable. Scoring and classification are handled by [analysis](../../analysis/prd.md).
 
 ## Evaluation and future signals
 
@@ -21,4 +21,4 @@ Git history can contain unrelated co-changes, including bulk formatting, depende
 ## Related documents
 
 - [Discovery](../../discovery.md) defines the shared adapter boundary.
-- [Analysis](../../analysis.md) interprets aggregated evidence.
+- [Analysis](../../analysis/prd.md) interprets aggregated evidence.

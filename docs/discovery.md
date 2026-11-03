@@ -15,7 +15,7 @@ Document search walks the repository once to build a source index. Source files 
 ## Related paths
 
 - [`/discovery/git`](discovery/git/prd.md) implements the current Git-backed adapter.
-- [`/analysis`](analysis.md) converts evidence into scored candidates.
+- [`/analysis`](analysis/prd.md) converts evidence into scored candidates.
 
 ## Experimental test discovery
 

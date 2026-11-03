@@ -13,5 +13,5 @@ Plain path filters match a substring of the repository-relative path. Patterns c
 ## Related paths
 
 - [`/cli`](cli/prd.md) defines the options.
-- [`/analysis`](analysis.md) defines candidate scores and classifications.
+- [`/analysis`](analysis/prd.md) defines candidate scores and classifications.
 - [`/output`](output.md) renders the prepared candidates.

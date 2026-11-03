@@ -15,7 +15,7 @@ CLIは方式名のカンマ区切り、または `all` を受け取る。利用�
 ## 関連path
 
 - [`/discovery/git`](discovery/git/prd.ja.md) は現在のGit adapterを実装する。
-- [`/analysis`](analysis.ja.md) は証拠をscore付き候補に変換する。
+- [`/analysis`](analysis/prd.ja.md) は証拠をscore付き候補に変換する。
 
 ## 試験的なテスト探索
 
