@@ -12,6 +12,6 @@ JSON出力はcandidate recordの配列で、path、score、共変更commit数、
 
 ## 関連path
 
-- [`/cli`](cli.ja.md) はformatを選び、結果を書き出す。
+- [`/cli`](cli/prd.ja.md) はformatを選び、結果を書き出す。
 - [`/filter`](filter.ja.md) はrender前に候補集合を整える。
 - [`/analysis`](analysis.ja.md) はcandidate fieldと証拠を定める。

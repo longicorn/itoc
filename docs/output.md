@@ -12,6 +12,6 @@ JSON output is an array of candidate records with path, score, co-changed commit
 
 ## Related paths
 
-- [`/cli`](cli.md) selects the format and writes the result.
+- [`/cli`](cli/prd.md) selects the format and writes the result.
 - [`/filter`](filter.md) prepares the candidate set before rendering.
 - [`/analysis`](analysis.md) defines the candidate fields and evidence.

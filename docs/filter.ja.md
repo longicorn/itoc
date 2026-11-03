@@ -12,6 +12,6 @@
 
 ## 関連path
 
-- [`/cli`](cli.ja.md) はoptionを定義する。
+- [`/cli`](cli/prd.ja.md) はoptionを定義する。
 - [`/analysis`](analysis.ja.md) はscoreと分類を定義する。
 - [`/output`](output.ja.md) は準備済み候補を表示する。
