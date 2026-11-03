@@ -26,7 +26,7 @@ Consider separating Ctags-related code in light of its role in experimental test
 
 Migrate incrementally while preserving observable behavior, including evidence, candidate scores, selection, and error handling. Existing tests and focused regression checks should verify behavior across each move.
 
-Git and document evidence collection live in `internal/discovery`; document format clue extraction lives in `internal/discovery/document`, and Ctags invocation and JSON parsing in `internal/discovery/ctags`. The registry, analysis orchestration, and test expansion remain in the root package. Test expansion operates on analyzed candidates, so its eventual boundary remains open.
+Git and document evidence collection live in `internal/discovery`; document format clue extraction lives in `internal/discovery/document`, and Ctags invocation and JSON parsing in `internal/discovery/ctags`. Test expansion passes implementation paths to discovery, which returns derived `Evidence` for test paths. The root package selects implementation candidates and merges those clues into candidates without changing existing scores or awarding a method agreement bonus. The registry and analysis orchestration remain in the root package.
 
 ## Discovery interface
 
