@@ -20,7 +20,7 @@ func parseCLI(args []string, output io.Writer) (cliConfig, string, error) {
 	var config cliConfig
 	fs := flag.NewFlagSet("itoc", flag.ContinueOnError)
 	fs.SetOutput(output)
-	fs.StringVar(&config.search, "search", "", "keyword search placeholder")
+	fs.StringVar(&config.search, "search", "", "search tracked file contents for a starting path")
 	fs.StringVar(&config.format, "format", "text", "output format: text or json")
 	fs.StringVar(&config.discovery, "discovery", "git", "comma-separated discovery methods or all")
 	fs.BoolVar(&config.discoverTests, "discover-tests", true, "find test candidates from implementation candidates")
@@ -75,7 +75,7 @@ func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "Usage: itoc [options] <repository-file>")
 	fmt.Fprintln(out, "       itoc [options] --search <keyword>")
 	fmt.Fprintln(out, "\nOptions:")
-	fmt.Fprintln(out, "  --search KEYWORD            Keyword search placeholder")
+	fmt.Fprintln(out, "  --search KEYWORD            Search tracked file contents for a starting path")
 	fmt.Fprintln(out, "  --format text|json          Output format (default: text)")
 	fmt.Fprintln(out, "  --discovery METHODS         Comma-separated methods or all (default: git)")
 	fmt.Fprintln(out, "  --discover-tests=false      Disable expansion of implementation candidates to tests")
