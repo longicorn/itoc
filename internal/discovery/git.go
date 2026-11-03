@@ -1,4 +1,4 @@
-package main
+package discovery
 
 import (
 	"fmt"
@@ -14,18 +14,18 @@ type GitRunner interface {
 
 type execGitRunner struct{}
 
-func (execGitRunner) Run(dir string, args ...string) (string, error) { return git(dir, args...) }
+func (execGitRunner) Run(dir string, args ...string) (string, error) { return Git(dir, args...) }
 
 type GitPathLister struct{ runner GitRunner }
 
 func (l GitPathLister) run(dir string, args ...string) (string, error) {
 	if l.runner == nil {
-		return git(dir, args...)
+		return Git(dir, args...)
 	}
 	return l.runner.Run(dir, args...)
 }
 
-func (l GitPathLister) List(input string) ([]cochangeEvidence, string, error) {
+func (l GitPathLister) List(input string) ([]Evidence, string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, "", err
@@ -56,7 +56,7 @@ func (l GitPathLister) List(input string) ([]cochangeEvidence, string, error) {
 		commits = append(commits, commitSnapshot{id: id, message: message, files: files})
 	}
 	cs := collectCochangeEvidence(target, commits)
-	evidence := make([]cochangeEvidence, 0, len(cs))
+	evidence := make([]Evidence, 0, len(cs))
 	for _, item := range cs {
 		evidence = append(evidence, *item)
 	}
@@ -81,7 +81,7 @@ func resolveGitTarget(cwd, root, input string, l GitPathLister) (string, error) 
 	return filepath.ToSlash(target), nil
 }
 
-func git(dir string, args ...string) (string, error) {
+func Git(dir string, args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
 	b, err := cmd.Output()
@@ -96,51 +96,51 @@ func git(dir string, args ...string) (string, error) {
 
 type commitSnapshot struct{ id, message, files string }
 
-func collectCochangeEvidence(target string, commits []commitSnapshot) map[string]*cochangeEvidence {
-	cs := map[string]*cochangeEvidence{}
+func collectCochangeEvidence(target string, commits []commitSnapshot) map[string]*Evidence {
+	cs := map[string]*Evidence{}
 	for _, commit := range commits {
-		terms := detectNoiseTerms(commit.message)
+		terms := DetectNoiseTerms(commit.message)
 		seen := map[string]bool{}
 		for _, p := range strings.Split(commit.files, "\n") {
 			p = strings.TrimSpace(p)
-			if p == "" || p == target || (!isCode(p) && !isDocument(p)) || seen[p] {
+			if p == "" || p == target || (!IsCode(p) && !IsDocument(p)) || seen[p] {
 				continue
 			}
 			seen[p] = true
 			if cs[p] == nil {
-				cs[p] = &cochangeEvidence{Path: p, Commits: map[string]bool{}, Methods: []string{"git"}}
+				cs[p] = &Evidence{Path: p, Commits: map[string]bool{}, Methods: []string{"git"}}
 			}
 			cs[p].Commits[commit.id] = true
-			cs[p].Details = appendUnique(cs[p].Details, "co-changed in commit "+commit.id)
-			allTerms := append(append([]string(nil), terms...), detectPathNoiseTerms(p)...)
-			if score := noiseScoreForTerms(terms); score > cs[p].NoiseScore {
+			cs[p].Details = AppendUnique(cs[p].Details, "co-changed in commit "+commit.id)
+			allTerms := append(append([]string(nil), terms...), DetectPathNoiseTerms(p)...)
+			if score := NoiseScoreForTerms(terms); score > cs[p].NoiseScore {
 				cs[p].NoiseScore = score
 			}
-			if score := noiseScoreForTerms(detectPathNoiseTerms(p)); score > cs[p].NoiseScore {
+			if score := NoiseScoreForTerms(DetectPathNoiseTerms(p)); score > cs[p].NoiseScore {
 				cs[p].NoiseScore = score
 			}
 			for _, term := range allTerms {
-				cs[p].NoiseTerms = appendUnique(cs[p].NoiseTerms, term)
+				cs[p].NoiseTerms = AppendUnique(cs[p].NoiseTerms, term)
 			}
 		}
 	}
 	return cs
 }
 
-func detectPathNoiseTerms(path string) []string {
+func DetectPathNoiseTerms(path string) []string {
 	var terms []string
 	for _, part := range strings.Split(strings.ToLower(filepath.ToSlash(path)), "/") {
 		name := strings.TrimSuffix(part, filepath.Ext(part))
 		for _, term := range []string{"benchmark", "benchmarks", "bench", "perf", "performance", "profiling", "profile"} {
 			if name == term || strings.HasPrefix(name, term+"_") || strings.HasSuffix(name, "_"+term) || strings.Contains(name, "_"+term+"_") {
-				terms = appendUnique(terms, "path:"+term)
+				terms = AppendUnique(terms, "path:"+term)
 			}
 		}
 	}
 	return terms
 }
 
-func noiseScoreForTerms(terms []string) int {
+func NoiseScoreForTerms(terms []string) int {
 	score := 0
 	for _, term := range terms {
 		if strings.HasPrefix(term, "path:benchmark") || strings.HasPrefix(term, "path:bench") || strings.HasPrefix(term, "path:perf") || strings.HasPrefix(term, "path:performance") {

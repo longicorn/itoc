@@ -1,4 +1,4 @@
-package main
+package discovery
 
 import (
 	"strings"
@@ -43,7 +43,7 @@ func TestGitPathListerCollectsCochangeEvidence(t *testing.T) {
 	if target != "docs/alpha.md" || len(evidence) != 3 {
 		t.Fatalf("target=%q evidence=%#v", target, evidence)
 	}
-	byPath := map[string]cochangeEvidence{}
+	byPath := map[string]Evidence{}
 	for _, e := range evidence {
 		byPath[e.Path] = e
 	}

@@ -1,4 +1,4 @@
-package main
+package discovery
 
 import (
 	"fmt"
@@ -7,11 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"itoc/internal/discovery"
 	"itoc/internal/discovery/document"
 )
-
-type unsupportedDocumentFormatError = discovery.UnsupportedDocumentFormatError
 
 type documentHint = document.Hint
 
@@ -40,7 +37,7 @@ func NewDocumentPathLister(root string) DocumentPathLister {
 	}}
 }
 
-func (l DocumentPathLister) List(input string) ([]cochangeEvidence, string, error) {
+func (l DocumentPathLister) List(input string) ([]Evidence, string, error) {
 	root := l.root
 	if root == "" {
 		var err error
@@ -75,35 +72,35 @@ func (l DocumentPathLister) List(input string) ([]cochangeEvidence, string, erro
 	}
 	extractor := ext[strings.ToLower(filepath.Ext(target))]
 	if extractor == nil {
-		return nil, "", unsupportedDocumentFormatError{Extension: filepath.Ext(target)}
+		return nil, "", UnsupportedDocumentFormatError{Extension: filepath.Ext(target)}
 	}
 	hints := extractor.Extract(string(content))
 	index, err := buildDocumentSearchIndex(root)
 	if err != nil {
 		return nil, "", err
 	}
-	byPath := map[string]*cochangeEvidence{}
+	byPath := map[string]*Evidence{}
 	for _, hint := range hints {
 		matches := documentHintMatches(root, filepath.Dir(abs), hint, index)
 		for _, match := range matches {
 			path := match.path
-			if path == target || !isCode(path) {
+			if path == target || !IsCode(path) {
 				continue
 			}
 			if byPath[path] == nil {
-				byPath[path] = &cochangeEvidence{Path: path, Commits: map[string]bool{}, Methods: []string{"document"}}
+				byPath[path] = &Evidence{Path: path, Commits: map[string]bool{}, Methods: []string{"document"}}
 			}
-			pathTerms := detectPathNoiseTerms(path)
+			pathTerms := DetectPathNoiseTerms(path)
 			for _, term := range pathTerms {
-				byPath[path].NoiseTerms = appendUnique(byPath[path].NoiseTerms, term)
+				byPath[path].NoiseTerms = AppendUnique(byPath[path].NoiseTerms, term)
 			}
-			if score := noiseScoreForTerms(pathTerms); score > byPath[path].NoiseScore {
+			if score := NoiseScoreForTerms(pathTerms); score > byPath[path].NoiseScore {
 				byPath[path].NoiseScore = score
 			}
-			byPath[path].Details = appendUnique(byPath[path].Details, documentMatchEvidence(hint, target, match))
+			byPath[path].Details = AppendUnique(byPath[path].Details, documentMatchEvidence(hint, target, match))
 		}
 	}
-	out := make([]cochangeEvidence, 0, len(byPath))
+	out := make([]Evidence, 0, len(byPath))
 	for _, item := range byPath {
 		out = append(out, *item)
 	}
@@ -124,7 +121,7 @@ func buildDocumentSearchIndex(root string) ([]documentSearchEntry, error) {
 			}
 			return nil
 		}
-		if isCode(path) && !isTestPath(path) {
+		if IsCode(path) && !IsTestPath(path) {
 			paths = append(paths, path)
 		}
 		return nil
