@@ -4,89 +4,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"itoc/internal/discovery"
 )
-
-func detectNoiseTerms(message string) []string {
-	keywords := []string{"lint", "linter", "format", "formatter", "refactor", "refactoring"}
-	lower := strings.ToLower(message)
-	var found []string
-	for _, word := range keywords {
-		if containsWord(lower, word) {
-			found = append(found, word)
-		}
-	}
-	return found
-}
-func containsWord(s, word string) bool {
-	for offset := 0; offset < len(s); {
-		i := strings.Index(s[offset:], word)
-		if i < 0 {
-			return false
-		}
-		i += offset
-		end := i + len(word)
-		if (i == 0 || !isASCIIWord(s[i-1])) && (end == len(s) || !isASCIIWord(s[end])) {
-			return true
-		}
-		offset = end
-	}
-	return false
-}
-func isASCIIWord(b byte) bool { return b == '_' || b >= 'a' && b <= 'z' || b >= '0' && b <= '9' }
-func appendUnique(items []string, value string) []string {
-	for _, v := range items {
-		if v == value {
-			return items
-		}
-	}
-	return append(items, value)
-}
-
-func isTestPath(path string) bool {
-	base := strings.ToLower(filepath.Base(path))
-	stem := strings.TrimSuffix(base, filepath.Ext(base))
-	for _, part := range strings.Split(strings.ToLower(filepath.ToSlash(path)), "/") {
-		if part == "test" || part == "tests" || part == "__tests__" || part == "spec" || part == "specs" {
-			return true
-		}
-	}
-	ext := strings.ToLower(filepath.Ext(base))
-	switch ext {
-	case ".go":
-		return strings.HasSuffix(stem, "_test")
-	case ".py":
-		return strings.HasPrefix(stem, "test_") || strings.HasSuffix(stem, "_test")
-	case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
-		return strings.HasSuffix(stem, ".test") || strings.HasSuffix(stem, ".spec")
-	case ".java", ".kt":
-		return strings.HasSuffix(stem, "test") || strings.HasSuffix(stem, "tests")
-	case ".rb":
-		return strings.HasSuffix(stem, "_test") || strings.HasSuffix(stem, "_spec")
-	case ".rs":
-		return strings.HasSuffix(stem, "_test")
-	}
-	return false
-}
 
 func absOrDot(p string) string {
 	if st, err := os.Stat(p); err == nil && !st.IsDir() {
 		return filepath.Dir(p)
 	}
 	return p
-}
-func isCode(p string) bool {
-	switch strings.ToLower(filepath.Ext(p)) {
-	case ".go", ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".kt", ".rs", ".c", ".h", ".cc", ".cpp", ".hpp", ".cs", ".rb", ".php", ".swift", ".scala", ".sh":
-		return true
-	}
-	return false
-}
-func isDocument(p string) bool {
-	switch strings.ToLower(filepath.Ext(p)) {
-	case ".md", ".mdx", ".rst", ".adoc", ".txt", ".org":
-		return true
-	}
-	return false
 }
 func filenameSimilarityBonus(target, candidate string) int {
 	a, b := weightedPathTokens(target), weightedPathTokens(candidate)
@@ -161,12 +87,12 @@ func filenameTokens(name string) map[string]bool {
 	return out
 }
 
-func analyzeCandidates(target string, evidence []cochangeEvidence) []candidate {
+func analyzeCandidates(target string, evidence []discovery.Evidence) []candidate {
 	out := make([]candidate, 0, len(evidence))
 	for _, e := range evidence {
-		c := candidate{path: e.path, score: len(e.commits), nameBonus: filenameSimilarityBonus(target, e.path), testLike: isTestPath(e.path), noiseScore: e.noiseScore, noiseTerms: e.noiseTerms, commits: e.commits, evidence: e.evidence, discoveries: e.discoveries, kind: "code"}
+		c := candidate{path: e.Path, score: len(e.Commits), nameBonus: filenameSimilarityBonus(target, e.Path), testLike: discovery.IsTestPath(e.Path), noiseScore: e.NoiseScore, noiseTerms: e.NoiseTerms, commits: e.Commits, evidence: e.Details, discoveries: e.Methods, kind: "code"}
 		c.score += c.nameBonus
-		if isDocument(c.path) {
+		if discovery.IsDocument(c.path) {
 			c.kind = "document"
 		}
 		out = append(out, c)

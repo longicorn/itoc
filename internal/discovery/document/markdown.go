@@ -1,4 +1,4 @@
-package main
+package document
 
 import (
 	"regexp"
@@ -12,19 +12,19 @@ var (
 	mdEmphasisRE = regexp.MustCompile(`(?:\*\*|__)([^*_\n]+)(?:\*\*|__)|(?:\*|_)([^*_\n]+)(?:\*|_)`)
 )
 
-func extractMarkdownHints(content string) []documentHint {
-	var out []documentHint
+func ExtractMarkdown(content string) []Hint {
+	var out []Hint
 	lines := strings.Split(content, "\n")
 	for i, line := range lines {
 		lineNo := i + 1
 		for _, m := range mdLinkRE.FindAllStringSubmatch(line, -1) {
-			out = append(out, documentHint{m[1], "markdown link", lineNo, false})
+			out = append(out, Hint{m[1], "markdown link", lineNo, false})
 		}
 		for _, m := range mdRefRE.FindAllStringSubmatch(line, -1) {
-			out = append(out, documentHint{m[1], "markdown reference link", lineNo, false})
+			out = append(out, Hint{m[1], "markdown reference link", lineNo, false})
 		}
 		for _, m := range mdCodeRE.FindAllStringSubmatch(line, -1) {
-			out = append(out, documentHint{m[1], "markdown inline code", lineNo, true})
+			out = append(out, Hint{m[1], "markdown inline code", lineNo, true})
 		}
 		for _, m := range mdEmphasisRE.FindAllStringSubmatch(line, -1) {
 			v := m[1]
@@ -32,7 +32,7 @@ func extractMarkdownHints(content string) []documentHint {
 				v = m[2]
 			}
 			if v != "" {
-				out = append(out, documentHint{v, "markdown emphasis", lineNo, true})
+				out = append(out, Hint{v, "markdown emphasis", lineNo, true})
 			}
 		}
 	}

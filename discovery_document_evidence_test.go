@@ -1,5 +1,7 @@
 package main
 
+import "itoc/internal/discovery"
+
 import (
 	"os"
 	"path/filepath"
@@ -15,13 +17,13 @@ func TestDocumentEvidenceRecordsMatchTypesAndFrequency(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	evidence, _, err := NewDocumentPathLister(root).List(filepath.Join(root, "guide.md"))
+	evidence, _, err := discovery.NewDocumentPathLister(root).List(filepath.Join(root, "guide.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	byPath := map[string]string{}
 	for _, e := range evidence {
-		byPath[e.path] = strings.Join(e.evidence, " | ")
+		byPath[e.Path] = strings.Join(e.Details, " | ")
 	}
 	for _, part := range []string{"explicit path", "exact filename", "source text", "matched 2 of 3 indexed files"} {
 		if !strings.Contains(byPath["alpha.go"], part) {

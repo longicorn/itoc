@@ -18,8 +18,22 @@ A failure in a selected method fails a multi-method run with the method name, ex
 
 After primary results are merged, optional test discovery expands implementation candidates by one step. This derived evidence is merged by path without an independent-method agreement bonus; new test candidates start at score zero and existing scores are unchanged. Candidate preparation, including filters and limits, follows expansion, and output follows preparation. The [Ctags ADR](ctags/adr.md) describes the experimental expansion and its failure behavior.
 
-## Current interface and open questions
+## Package organization direction
 
-`PathLister.List` currently returns `[]cochangeEvidence`, a target string, and an error; `discoverWithLister` calls `analyzeCandidates` on success. Despite its name, `cochangeEvidence` is also used for document discovery. This records the current interface, not a decision that Git-shaped evidence is the general model for all future methods. A source-independent evidence representation and its interface remain undecided.
+Refactor discovery toward `internal/discovery/`, separating the shared boundary and orchestration from responsibilities such as Git and document evidence collection. Discovery and analysis share the `Evidence` struct defined in `internal/discovery`; discovery does not depend on analysis. The struct is the boundary, while its fields may evolve as evidence needs change.
+
+Consider separating Ctags-related code in light of its role in experimental test expansion. Do not fix a tree-sitter package structure until its intended use and responsibilities are clear. Introduce boundaries as needed rather than assuming each tool must have a separate package.
+
+Migrate incrementally while preserving observable behavior, including evidence, candidate scores, selection, and error handling. Existing tests and focused regression checks should verify behavior across each move.
+
+Git and document evidence collection live in `internal/discovery`; document format clue extraction lives in `internal/discovery/document`, and Ctags invocation and JSON parsing in `internal/discovery/ctags`. Test expansion passes implementation paths to discovery, which returns derived `Evidence` for test paths. The root package selects implementation candidates and merges those clues into candidates without changing existing scores or awarding a method agreement bonus. The registry and analysis orchestration remain in the root package.
+
+## Discovery interface
+
+Each primary method implements `PathLister.List(input string) ([]Evidence, string, error)`. It returns evidence and the resolved target, or an error. Target and candidate paths are repository-relative. The initial evidence fields carry the path, distinct Git commit IDs, noise score and terms, descriptive details, and method names. Commit IDs may be empty for non-Git methods. These fields preserve current behavior and are not a fixed schema for future evidence. Analysis consumes evidence and remains responsible for candidate scoring and classification.
+
+An exported unsupported-document-format error lets orchestration preserve the existing distinction between a skipped method in a multi-method run and an error in a document-only run. Implementations and analysis depend on the shared discovery boundary, not on each other.
+
+## Open questions
 
 The provisional merge and test-expansion scoring rules require evaluation. Adding new methods or changing the processing order may require revisiting evidence representation, error handling, and scoring without treating an additional match as proof of relevance.

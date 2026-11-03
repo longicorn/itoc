@@ -13,15 +13,6 @@ type candidate struct {
 	discoveries []string
 }
 
-type cochangeEvidence struct {
-	path        string
-	commits     map[string]bool
-	noiseScore  int
-	noiseTerms  []string
-	evidence    []string
-	discoveries []string
-}
-
 type candidateOptions struct {
 	includeExt, excludeExt   []string
 	includePath, excludePath []string

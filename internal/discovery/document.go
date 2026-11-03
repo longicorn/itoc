@@ -1,4 +1,4 @@
-package main
+package discovery
 
 import (
 	"fmt"
@@ -6,20 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"itoc/internal/discovery/document"
 )
 
-type unsupportedDocumentFormatError struct{ extension string }
-
-func (e unsupportedDocumentFormatError) Error() string {
-	return "unsupported document format: " + e.extension
-}
-
-type documentHint struct {
-	value  string
-	kind   string
-	line   int
-	strong bool
-}
+type documentHint = document.Hint
 
 type documentExtractor interface {
 	Extract(string) []documentHint
@@ -29,10 +20,10 @@ type MarkdownExtractor struct{}
 type RSTExtractor struct{}
 
 func (MarkdownExtractor) Extract(content string) []documentHint {
-	return extractMarkdownHints(content)
+	return document.ExtractMarkdown(content)
 }
 func (RSTExtractor) Extract(content string) []documentHint {
-	return extractRSTHints(content)
+	return document.ExtractRST(content)
 }
 
 type DocumentPathLister struct {
@@ -46,7 +37,7 @@ func NewDocumentPathLister(root string) DocumentPathLister {
 	}}
 }
 
-func (l DocumentPathLister) List(input string) ([]cochangeEvidence, string, error) {
+func (l DocumentPathLister) List(input string) ([]Evidence, string, error) {
 	root := l.root
 	if root == "" {
 		var err error
@@ -81,35 +72,35 @@ func (l DocumentPathLister) List(input string) ([]cochangeEvidence, string, erro
 	}
 	extractor := ext[strings.ToLower(filepath.Ext(target))]
 	if extractor == nil {
-		return nil, "", unsupportedDocumentFormatError{extension: filepath.Ext(target)}
+		return nil, "", UnsupportedDocumentFormatError{Extension: filepath.Ext(target)}
 	}
 	hints := extractor.Extract(string(content))
 	index, err := buildDocumentSearchIndex(root)
 	if err != nil {
 		return nil, "", err
 	}
-	byPath := map[string]*cochangeEvidence{}
+	byPath := map[string]*Evidence{}
 	for _, hint := range hints {
 		matches := documentHintMatches(root, filepath.Dir(abs), hint, index)
 		for _, match := range matches {
 			path := match.path
-			if path == target || !isCode(path) {
+			if path == target || !IsCode(path) {
 				continue
 			}
 			if byPath[path] == nil {
-				byPath[path] = &cochangeEvidence{path: path, commits: map[string]bool{}, discoveries: []string{"document"}}
+				byPath[path] = &Evidence{Path: path, Commits: map[string]bool{}, Methods: []string{"document"}}
 			}
-			pathTerms := detectPathNoiseTerms(path)
+			pathTerms := DetectPathNoiseTerms(path)
 			for _, term := range pathTerms {
-				byPath[path].noiseTerms = appendUnique(byPath[path].noiseTerms, term)
+				byPath[path].NoiseTerms = AppendUnique(byPath[path].NoiseTerms, term)
 			}
-			if score := noiseScoreForTerms(pathTerms); score > byPath[path].noiseScore {
-				byPath[path].noiseScore = score
+			if score := NoiseScoreForTerms(pathTerms); score > byPath[path].NoiseScore {
+				byPath[path].NoiseScore = score
 			}
-			byPath[path].evidence = appendUnique(byPath[path].evidence, documentMatchEvidence(hint, target, match))
+			byPath[path].Details = AppendUnique(byPath[path].Details, documentMatchEvidence(hint, target, match))
 		}
 	}
-	out := make([]cochangeEvidence, 0, len(byPath))
+	out := make([]Evidence, 0, len(byPath))
 	for _, item := range byPath {
 		out = append(out, *item)
 	}
@@ -130,7 +121,7 @@ func buildDocumentSearchIndex(root string) ([]documentSearchEntry, error) {
 			}
 			return nil
 		}
-		if isCode(path) && !isTestPath(path) {
+		if IsCode(path) && !IsTestPath(path) {
 			paths = append(paths, path)
 		}
 		return nil
@@ -172,7 +163,7 @@ func buildDocumentSearchIndex(root string) ([]documentSearchEntry, error) {
 }
 
 func documentMatchEvidence(hint documentHint, target string, match documentMatch) string {
-	prefix := fmt.Sprintf("%s %q at %s:%d; %s", hint.kind, hint.value, target, hint.line, match.kind)
+	prefix := fmt.Sprintf("%s %q at %s:%d; %s", hint.Kind, hint.Value, target, hint.Line, match.kind)
 	if match.kind == "explicit path" {
 		return prefix
 	}
@@ -185,7 +176,7 @@ type documentMatch struct {
 }
 
 func documentHintMatches(root, docDir string, hint documentHint, index []documentSearchEntry) []documentMatch {
-	value := strings.TrimSpace(hint.value)
+	value := strings.TrimSpace(hint.Value)
 	if value == "" || strings.HasPrefix(value, "#") || strings.Contains(value, "://") {
 		return nil
 	}
@@ -205,7 +196,7 @@ func documentHintMatches(root, docDir string, hint documentHint, index []documen
 			}
 		}
 	}
-	if hint.strong && usefulDocumentTerm(value) {
+	if hint.Strong && usefulDocumentTerm(value) {
 		var terms []documentMatch
 		indexedCount := 0
 		for _, entry := range index {

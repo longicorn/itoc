@@ -3,34 +3,34 @@ package main
 import (
 	"fmt"
 	"strings"
+
+	"itoc/internal/discovery"
 )
 
-type PathLister interface {
-	List(input string) ([]cochangeEvidence, string, error)
+type discoveryMethod struct {
+	name   string
+	create func() discovery.PathLister
 }
 
-type discoveryMode string
-
-const (
-	discoveryGit      discoveryMode = "git"
-	discoveryDocument discoveryMode = "document"
-)
-
-var discoveryRegistry = map[string]func() PathLister{
-	"git":      func() PathLister { return GitPathLister{} },
-	"document": func() PathLister { return NewDocumentPathLister("") },
+var discoveryMethods = []discoveryMethod{
+	{"git", func() discovery.PathLister { return discovery.GitPathLister{} }},
+	{"document", func() discovery.PathLister { return discovery.NewDocumentPathLister("") }},
 }
 
-var discoveryMethodOrder = []string{"git", "document"}
+var discoveryRegistry = func() map[string]func() discovery.PathLister {
+	registry := make(map[string]func() discovery.PathLister, len(discoveryMethods))
+	for _, method := range discoveryMethods {
+		registry[method.name] = method.create
+	}
+	return registry
+}()
 
 func parseDiscoveryMethods(value string) ([]string, error) {
 	value = strings.TrimSpace(value)
 	if value == "all" {
 		methods := make([]string, 0, len(discoveryRegistry))
-		for _, name := range discoveryMethodOrder {
-			if _, ok := discoveryRegistry[name]; ok {
-				methods = append(methods, name)
-			}
+		for _, method := range discoveryMethods {
+			methods = append(methods, method.name)
 		}
 		return methods, nil
 	}
@@ -55,11 +55,7 @@ func parseDiscoveryMethods(value string) ([]string, error) {
 	return methods, nil
 }
 
-func discover(input string) ([]candidate, error) {
-	return discoverWithLister(input, GitPathLister{})
-}
-
-func discoverWithLister(input string, lister PathLister) ([]candidate, error) {
+func discoverWithLister(input string, lister discovery.PathLister) ([]candidate, error) {
 	evidence, target, err := lister.List(input)
 	if err != nil {
 		return nil, err
