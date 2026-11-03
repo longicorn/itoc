@@ -164,7 +164,7 @@ func filenameTokens(name string) map[string]bool {
 func analyzeCandidates(target string, evidence []cochangeEvidence) []candidate {
 	out := make([]candidate, 0, len(evidence))
 	for _, e := range evidence {
-		c := candidate{path: e.path, score: len(e.commits), nameBonus: filenameSimilarityBonus(target, e.path), testLike: isTestPath(e.path), noiseScore: e.noiseScore, noiseTerms: e.noiseTerms, commits: e.commits, evidence: e.evidence, discoveries: e.discoveries, kind: "code"}
+		c := candidate{path: e.Path, score: len(e.Commits), nameBonus: filenameSimilarityBonus(target, e.Path), testLike: isTestPath(e.Path), noiseScore: e.NoiseScore, noiseTerms: e.NoiseTerms, commits: e.Commits, evidence: e.Details, discoveries: e.Methods, kind: "code"}
 		c.score += c.nameBonus
 		if isDocument(c.path) {
 			c.kind = "document"

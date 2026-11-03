@@ -108,19 +108,19 @@ func collectCochangeEvidence(target string, commits []commitSnapshot) map[string
 			}
 			seen[p] = true
 			if cs[p] == nil {
-				cs[p] = &cochangeEvidence{path: p, commits: map[string]bool{}, discoveries: []string{"git"}}
+				cs[p] = &cochangeEvidence{Path: p, Commits: map[string]bool{}, Methods: []string{"git"}}
 			}
-			cs[p].commits[commit.id] = true
-			cs[p].evidence = appendUnique(cs[p].evidence, "co-changed in commit "+commit.id)
+			cs[p].Commits[commit.id] = true
+			cs[p].Details = appendUnique(cs[p].Details, "co-changed in commit "+commit.id)
 			allTerms := append(append([]string(nil), terms...), detectPathNoiseTerms(p)...)
-			if score := noiseScoreForTerms(terms); score > cs[p].noiseScore {
-				cs[p].noiseScore = score
+			if score := noiseScoreForTerms(terms); score > cs[p].NoiseScore {
+				cs[p].NoiseScore = score
 			}
-			if score := noiseScoreForTerms(detectPathNoiseTerms(p)); score > cs[p].noiseScore {
-				cs[p].noiseScore = score
+			if score := noiseScoreForTerms(detectPathNoiseTerms(p)); score > cs[p].NoiseScore {
+				cs[p].NoiseScore = score
 			}
 			for _, term := range allTerms {
-				cs[p].noiseTerms = appendUnique(cs[p].noiseTerms, term)
+				cs[p].NoiseTerms = appendUnique(cs[p].NoiseTerms, term)
 			}
 		}
 	}

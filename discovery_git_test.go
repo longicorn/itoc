@@ -45,10 +45,10 @@ func TestGitPathListerCollectsCochangeEvidence(t *testing.T) {
 	}
 	byPath := map[string]cochangeEvidence{}
 	for _, e := range evidence {
-		byPath[e.path] = e
+		byPath[e.Path] = e
 	}
 	alpha := byPath["src/alpha.go"]
-	if len(alpha.commits) != 2 || alpha.noiseScore != 1 || len(alpha.noiseTerms) != 1 || alpha.noiseTerms[0] != "refactor" {
+	if len(alpha.Commits) != 2 || alpha.NoiseScore != 1 || len(alpha.NoiseTerms) != 1 || alpha.NoiseTerms[0] != "refactor" {
 		t.Fatalf("alpha evidence=%#v", alpha)
 	}
 }
@@ -63,7 +63,7 @@ func TestCollectCochangeEvidenceDeduplicatesWithinCommit(t *testing.T) {
 		t.Fatalf("evidence = %#v, want only source candidate", got)
 	}
 	a := got["src/a.go"]
-	if a == nil || len(a.commits) != 2 || a.noiseScore != 1 || len(a.noiseTerms) != 1 || a.noiseTerms[0] != "format" {
+	if a == nil || len(a.Commits) != 2 || a.NoiseScore != 1 || len(a.NoiseTerms) != 1 || a.NoiseTerms[0] != "format" {
 		t.Fatalf("source evidence = %#v", a)
 	}
 }

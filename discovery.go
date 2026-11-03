@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"strings"
+
+	"itoc/internal/discovery"
 )
 
-type PathLister interface {
-	List(input string) ([]cochangeEvidence, string, error)
-}
+type PathLister = discovery.PathLister
 
 type discoveryMode string
 

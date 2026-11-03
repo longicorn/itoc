@@ -12,8 +12,8 @@ import (
 func TestRunEndToEndWithInjectedLister(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	lister := fixedPathLister{target: "docs/alpha.md", evidence: []cochangeEvidence{
-		{path: "src/alpha.go", commits: map[string]bool{"c": true}},
-		{path: "src/beta.go", commits: map[string]bool{"c": true}},
+		{Path: "src/alpha.go", Commits: map[string]bool{"c": true}},
+		{Path: "src/beta.go", Commits: map[string]bool{"c": true}},
 	}}
 	err := run([]string{"--format", "json", "--include-path", "alpha", "docs/alpha.md"}, &stdout, &stderr, lister)
 	if err != nil {
@@ -30,7 +30,7 @@ func TestDiscoverManySkipsUnsupportedDocumentFormat(t *testing.T) {
 	if err := os.WriteFile(input, []byte("class Example; end"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	git := fixedPathLister{target: "doc.rb", evidence: []cochangeEvidence{{path: "app/example.rb", commits: map[string]bool{"c": true}}}}
+	git := fixedPathLister{target: "doc.rb", evidence: []cochangeEvidence{{Path: "app/example.rb", Commits: map[string]bool{"c": true}}}}
 	got, err := discoverMany(input, []namedLister{{"git", git}, {"document", NewDocumentPathLister(dir)}})
 	if err != nil {
 		t.Fatal(err)

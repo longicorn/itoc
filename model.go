@@ -1,5 +1,7 @@
 package main
 
+import "itoc/internal/discovery"
+
 type candidate struct {
 	path        string
 	score       int
@@ -13,14 +15,7 @@ type candidate struct {
 	discoveries []string
 }
 
-type cochangeEvidence struct {
-	path        string
-	commits     map[string]bool
-	noiseScore  int
-	noiseTerms  []string
-	evidence    []string
-	discoveries []string
-}
+type cochangeEvidence = discovery.Evidence
 
 type candidateOptions struct {
 	includeExt, excludeExt   []string

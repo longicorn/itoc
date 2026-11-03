@@ -7,14 +7,11 @@ import (
 	"strings"
 	"sync"
 
+	"itoc/internal/discovery"
 	"itoc/internal/discovery/document"
 )
 
-type unsupportedDocumentFormatError struct{ extension string }
-
-func (e unsupportedDocumentFormatError) Error() string {
-	return "unsupported document format: " + e.extension
-}
+type unsupportedDocumentFormatError = discovery.UnsupportedDocumentFormatError
 
 type documentHint = document.Hint
 
@@ -78,7 +75,7 @@ func (l DocumentPathLister) List(input string) ([]cochangeEvidence, string, erro
 	}
 	extractor := ext[strings.ToLower(filepath.Ext(target))]
 	if extractor == nil {
-		return nil, "", unsupportedDocumentFormatError{extension: filepath.Ext(target)}
+		return nil, "", unsupportedDocumentFormatError{Extension: filepath.Ext(target)}
 	}
 	hints := extractor.Extract(string(content))
 	index, err := buildDocumentSearchIndex(root)
@@ -94,16 +91,16 @@ func (l DocumentPathLister) List(input string) ([]cochangeEvidence, string, erro
 				continue
 			}
 			if byPath[path] == nil {
-				byPath[path] = &cochangeEvidence{path: path, commits: map[string]bool{}, discoveries: []string{"document"}}
+				byPath[path] = &cochangeEvidence{Path: path, Commits: map[string]bool{}, Methods: []string{"document"}}
 			}
 			pathTerms := detectPathNoiseTerms(path)
 			for _, term := range pathTerms {
-				byPath[path].noiseTerms = appendUnique(byPath[path].noiseTerms, term)
+				byPath[path].NoiseTerms = appendUnique(byPath[path].NoiseTerms, term)
 			}
-			if score := noiseScoreForTerms(pathTerms); score > byPath[path].noiseScore {
-				byPath[path].noiseScore = score
+			if score := noiseScoreForTerms(pathTerms); score > byPath[path].NoiseScore {
+				byPath[path].NoiseScore = score
 			}
-			byPath[path].evidence = appendUnique(byPath[path].evidence, documentMatchEvidence(hint, target, match))
+			byPath[path].Details = appendUnique(byPath[path].Details, documentMatchEvidence(hint, target, match))
 		}
 	}
 	out := make([]cochangeEvidence, 0, len(byPath))

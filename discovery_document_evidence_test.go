@@ -21,7 +21,7 @@ func TestDocumentEvidenceRecordsMatchTypesAndFrequency(t *testing.T) {
 	}
 	byPath := map[string]string{}
 	for _, e := range evidence {
-		byPath[e.path] = strings.Join(e.evidence, " | ")
+		byPath[e.Path] = strings.Join(e.Details, " | ")
 	}
 	for _, part := range []string{"explicit path", "exact filename", "source text", "matched 2 of 3 indexed files"} {
 		if !strings.Contains(byPath["alpha.go"], part) {
