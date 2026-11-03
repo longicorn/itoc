@@ -71,7 +71,7 @@ func TestExpandTestsWithoutCtags(t *testing.T) {
 	}
 	for _, ctags := range []string{"", filepath.Join(root, "nonexistent-ctags")} {
 		var warnings strings.Builder
-		got, err := expandTestCandidates(root, []candidate{{path: "widget.go", kind: "code"}}, ctags, &warnings)
+		got, err := expandTestCandidates(root, []candidate{{path: "widget.go", kind: "code"}, {path: "widget_test.go", kind: "code", testLike: true, score: 7, evidence: []string{"existing"}}}, ctags, &warnings)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -79,6 +79,9 @@ func TestExpandTestsWithoutCtags(t *testing.T) {
 		for _, c := range got {
 			if c.path == "widget_test.go" {
 				evidence = strings.Join(c.evidence, " ")
+				if c.score != 7 || !strings.Contains(evidence, "existing") {
+					t.Fatalf("existing candidate changed: %#v", c)
+				}
 			}
 		}
 		if !strings.Contains(evidence, "filename matches") || !strings.Contains(evidence, "Git co-change") {
