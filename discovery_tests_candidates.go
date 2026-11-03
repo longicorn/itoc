@@ -1,16 +1,16 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"itoc/internal/discovery/ctags"
 )
 
 // expandTestCandidates follows implementation candidates once. Its evidence is
@@ -74,35 +74,14 @@ func expandTestCandidates(root string, candidates []candidate, ctagsPath string,
 		stem := strings.TrimSuffix(filepath.Base(impl.path), filepath.Ext(impl.path))
 		names := map[string]bool{}
 		if ctagsPath != "" {
-			cmd := exec.Command(ctagsPath, "--output-format=json", "--fields=+n", "-o", "-", abs)
-			raw, e := cmd.Output()
-			if e != nil {
+			var e error
+			names, e = ctags.Names(ctagsPath, abs)
+			if errors.Is(e, ctags.ErrInvalidOutput) {
+				fmt.Fprintf(warnings, "itoc: warning: invalid ctags output for %s; identifier-based discovery skipped\n", impl.path)
+			} else if e != nil {
 				fmt.Fprintf(warnings, "itoc: warning: ctags failed for %s; identifier-based discovery skipped: %v\n", impl.path, e)
-			} else {
-				scanner := bufio.NewScanner(bytes.NewReader(raw))
-				scanner.Buffer(make([]byte, 4096), 1024*1024)
-				valid := true
-				for scanner.Scan() {
-					var tag struct {
-						Type string `json:"_type"`
-						Name string `json:"name"`
-					}
-					if e := json.Unmarshal(scanner.Bytes(), &tag); e != nil {
-						valid = false
-						break
-					}
-					if tag.Type == "tag" && len(tag.Name) >= 3 {
-						names[tag.Name] = true
-					}
-				}
-				if scanner.Err() != nil {
-					valid = false
-				}
-				if !valid {
-					fmt.Fprintf(warnings, "itoc: warning: invalid ctags output for %s; identifier-based discovery skipped\n", impl.path)
-					names = map[string]bool{}
-				}
 			}
+
 		}
 
 		log, e := git(root, "log", "--format=%H", "--follow", "--", impl.path)

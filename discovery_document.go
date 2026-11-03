@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"itoc/internal/discovery/document"
 )
 
 type unsupportedDocumentFormatError struct{ extension string }
@@ -14,12 +16,7 @@ func (e unsupportedDocumentFormatError) Error() string {
 	return "unsupported document format: " + e.extension
 }
 
-type documentHint struct {
-	value  string
-	kind   string
-	line   int
-	strong bool
-}
+type documentHint = document.Hint
 
 type documentExtractor interface {
 	Extract(string) []documentHint
@@ -29,10 +26,10 @@ type MarkdownExtractor struct{}
 type RSTExtractor struct{}
 
 func (MarkdownExtractor) Extract(content string) []documentHint {
-	return extractMarkdownHints(content)
+	return document.ExtractMarkdown(content)
 }
 func (RSTExtractor) Extract(content string) []documentHint {
-	return extractRSTHints(content)
+	return document.ExtractRST(content)
 }
 
 type DocumentPathLister struct {
@@ -172,7 +169,7 @@ func buildDocumentSearchIndex(root string) ([]documentSearchEntry, error) {
 }
 
 func documentMatchEvidence(hint documentHint, target string, match documentMatch) string {
-	prefix := fmt.Sprintf("%s %q at %s:%d; %s", hint.kind, hint.value, target, hint.line, match.kind)
+	prefix := fmt.Sprintf("%s %q at %s:%d; %s", hint.Kind, hint.Value, target, hint.Line, match.kind)
 	if match.kind == "explicit path" {
 		return prefix
 	}
@@ -185,7 +182,7 @@ type documentMatch struct {
 }
 
 func documentHintMatches(root, docDir string, hint documentHint, index []documentSearchEntry) []documentMatch {
-	value := strings.TrimSpace(hint.value)
+	value := strings.TrimSpace(hint.Value)
 	if value == "" || strings.HasPrefix(value, "#") || strings.Contains(value, "://") {
 		return nil
 	}
@@ -205,7 +202,7 @@ func documentHintMatches(root, docDir string, hint documentHint, index []documen
 			}
 		}
 	}
-	if hint.strong && usefulDocumentTerm(value) {
+	if hint.Strong && usefulDocumentTerm(value) {
 		var terms []documentMatch
 		indexedCount := 0
 		for _, entry := range index {
