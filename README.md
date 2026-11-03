@@ -36,6 +36,8 @@ Pass a committed repository file to discover files changed alongside it in Git h
 ```
 
 Results are grouped into implementation, test, and document candidates. The default limit is 10 candidates per group; use `--limit 5` to show fewer or `--limit 0` to show all. JSON output is available with `--format json`.
+Test candidates are also discovered from implementation candidates by filename and Git co-changes. When Universal Ctags with JSON output is available, identifier matches provide additional candidates that may improve discovery; if it is unavailable, itoc warns and continues with the other methods. These mechanical matches can produce false positives and miss relevant files; a match does not prove test coverage. Use `--exclude-candidate test` to hide test candidates, or `--discover-tests=false` to disable this expansion.
+
 Use `--min-score N` to require a minimum candidate score. When combined with `--limit`, the score filter is applied first, then the top N results per group are shown.
 
 Use repeatable filters to narrow results:
