@@ -20,5 +20,5 @@ Git history can contain unrelated co-changes, including bulk formatting, depende
 
 ## Related documents
 
-- [Discovery](../../discovery.md) defines the shared adapter boundary.
+- [Discovery](../prd.md) defines the shared adapter boundary.
 - [Analysis](../../analysis/prd.md) interprets aggregated evidence.

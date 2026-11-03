@@ -11,7 +11,7 @@ The CLI provides a command-line entry point for discovering relationships betwee
 - Present candidates in text or JSON, with detailed evidence available when requested. Candidates are clues, not proof of a relationship.
 - Report invalid inputs and workflow errors to the user with an unsuccessful exit status.
 
-The CLI coordinates the workflow; [discovery](../discovery.md) obtains and analyzes candidates, [filtering](../filter.md) prepares them, and [output](../output.md) renders them. Supported options and examples are documented in the [README](../../README.md).
+The CLI coordinates the workflow; [discovery](../discovery/prd.md) obtains and analyzes candidates, [filtering](../filter.md) prepares them, and [output](../output.md) renders them. Supported options and examples are documented in the [README](../../README.md).
 
 ## Current behavior
 

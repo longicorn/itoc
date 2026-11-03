@@ -8,7 +8,7 @@ Keyword search provides an entry point for finding repository artifacts when the
 
 Given an explicitly supplied keyword, itoc should find candidate repository paths and report the evidence for each match. Evidence should identify what matched and where, so a person or an AI can inspect the result. A literal match is a clue, not proof that the artifact implements or describes the intended feature. No matches do not prove that the relevant artifact is absent.
 
-These results are starting candidates. Further exploration of relationships from a selected path belongs to [discovery](../discovery.md). The user or a consuming workflow decides which candidates to investigate or accept; keyword search does not determine the scope of an assessment.
+These results are starting candidates. Further exploration of relationships from a selected path belongs to [discovery](../discovery/prd.md). The user or a consuming workflow decides which candidates to investigate or accept; keyword search does not determine the scope of an assessment.
 
 The proposed CLI forms are `itoc [options] <file-path>` and `itoc [options] --search <keyword>`. The explicit option avoids interpreting a nonexistent path as a keyword. The CLI also accepts `--search <keyword>` as an experimental entry point.
 

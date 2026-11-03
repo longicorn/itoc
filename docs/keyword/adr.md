@@ -11,7 +11,7 @@ A user may know a feature name or displayed text without knowing a repository pa
 ## Decision
 
 - Accept an explicitly supplied keyword and return candidate repository paths with evidence identifying what matched and where.
-- Treat these paths as starting candidates. Further relationship exploration belongs to [discovery](../discovery.md); the user or consuming workflow chooses which candidates to investigate or accept.
+- Treat these paths as starting candidates. Further relationship exploration belongs to [discovery](../discovery/prd.md); the user or consuming workflow chooses which candidates to investigate or accept.
 - Use `itoc [options] --search <keyword>` as the proposed keyword CLI form alongside `itoc [options] <file-path>`. Explicit selection avoids interpreting a nonexistent path as a keyword. The experimental CLI connects search to discovery.
 
 ## Consequences and exploration
