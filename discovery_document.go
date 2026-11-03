@@ -92,20 +92,21 @@ func (l DocumentPathLister) List(input string) ([]cochangeEvidence, string, erro
 	for _, hint := range hints {
 		matches := documentHintMatches(root, filepath.Dir(abs), hint, index)
 		for _, match := range matches {
-			if match == target || !isCode(match) {
+			path := match.path
+			if path == target || !isCode(path) {
 				continue
 			}
-			if byPath[match] == nil {
-				byPath[match] = &cochangeEvidence{path: match, commits: map[string]bool{}, discoveries: []string{"document"}}
+			if byPath[path] == nil {
+				byPath[path] = &cochangeEvidence{path: path, commits: map[string]bool{}, discoveries: []string{"document"}}
 			}
-			pathTerms := detectPathNoiseTerms(match)
+			pathTerms := detectPathNoiseTerms(path)
 			for _, term := range pathTerms {
-				byPath[match].noiseTerms = appendUnique(byPath[match].noiseTerms, term)
+				byPath[path].noiseTerms = appendUnique(byPath[path].noiseTerms, term)
 			}
-			if score := noiseScoreForTerms(pathTerms); score > byPath[match].noiseScore {
-				byPath[match].noiseScore = score
+			if score := noiseScoreForTerms(pathTerms); score > byPath[path].noiseScore {
+				byPath[path].noiseScore = score
 			}
-			byPath[match].evidence = appendUnique(byPath[match].evidence, fmt.Sprintf("%s %q at %s:%d", hint.kind, hint.value, target, hint.line))
+			byPath[path].evidence = appendUnique(byPath[path].evidence, documentMatchEvidence(hint, target, match))
 		}
 	}
 	out := make([]cochangeEvidence, 0, len(byPath))
@@ -170,20 +171,29 @@ func buildDocumentSearchIndex(root string) ([]documentSearchEntry, error) {
 	return entries, nil
 }
 
-func documentHintMatches(root, docDir string, hint documentHint, index []documentSearchEntry) []string {
+func documentMatchEvidence(hint documentHint, target string, match documentMatch) string {
+	prefix := fmt.Sprintf("%s %q at %s:%d; %s", hint.kind, hint.value, target, hint.line, match.kind)
+	if match.kind == "explicit path" {
+		return prefix
+	}
+	return fmt.Sprintf("%s; matched %d of %d indexed files", prefix, match.frequency, match.indexSize)
+}
+
+type documentMatch struct {
+	path, kind           string
+	frequency, indexSize int
+}
+
+func documentHintMatches(root, docDir string, hint documentHint, index []documentSearchEntry) []documentMatch {
 	value := strings.TrimSpace(hint.value)
+	if value == "" || strings.HasPrefix(value, "#") || strings.Contains(value, "://") {
+		return nil
+	}
+	value = strings.SplitN(strings.SplitN(value, "#", 2)[0], "?", 2)[0]
 	if value == "" {
 		return nil
 	}
-	if strings.HasPrefix(value, "#") || strings.Contains(value, "://") {
-		return nil
-	}
-	value = strings.SplitN(value, "#", 2)[0]
-	value = strings.SplitN(value, "?", 2)[0]
-	if value == "" {
-		return nil
-	}
-	candidates := []string{}
+	var matches []documentMatch
 	if strings.ContainsAny(value, "/\\.") {
 		p := value
 		if !filepath.IsAbs(p) {
@@ -191,21 +201,42 @@ func documentHintMatches(root, docDir string, hint documentHint, index []documen
 		}
 		if rel, err := filepath.Rel(root, p); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			if st, err := os.Stat(p); err == nil && !st.IsDir() {
-				candidates = append(candidates, filepath.ToSlash(rel))
+				matches = append(matches, documentMatch{path: filepath.ToSlash(rel), kind: "explicit path", frequency: 1, indexSize: len(index)})
 			}
 		}
 	}
 	if hint.strong && usefulDocumentTerm(value) {
+		var terms []documentMatch
+		indexedCount := 0
+		for _, entry := range index {
+			if entry.path != "" {
+				indexedCount++
+			}
+		}
+		matchedFiles := map[string]bool{}
 		for _, entry := range index {
 			if entry.path == "" {
 				continue
 			}
-			if strings.EqualFold(entry.base, value) || strings.Contains(entry.base, value) || strings.Contains(entry.content, value) {
-				candidates = append(candidates, entry.path)
+			if strings.EqualFold(entry.base, value) || strings.EqualFold(filepath.Base(entry.path), value) {
+				terms = append(terms, documentMatch{path: entry.path, kind: "exact filename"})
+				matchedFiles[entry.path] = true
+			} else if strings.Contains(entry.base, value) {
+				terms = append(terms, documentMatch{path: entry.path, kind: "filename substring"})
+				matchedFiles[entry.path] = true
+			}
+			if strings.Contains(entry.content, value) {
+				terms = append(terms, documentMatch{path: entry.path, kind: "source text"})
+				matchedFiles[entry.path] = true
 			}
 		}
+		for _, m := range terms {
+			m.frequency = len(matchedFiles)
+			m.indexSize = indexedCount
+			matches = append(matches, m)
+		}
 	}
-	return candidates
+	return matches
 }
 
 func usefulDocumentTerm(value string) bool {

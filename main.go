@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
 )
@@ -47,6 +48,24 @@ func run(args []string, stdout, stderr io.Writer, lister PathLister) error {
 	}
 	if err != nil {
 		return err
+	}
+	if config.discoverTests {
+		cwd, e := os.Getwd()
+		if e != nil {
+			return e
+		}
+		root, e := git(cwd, "rev-parse", "--show-toplevel")
+		if e != nil {
+			return e
+		}
+		ctagsPath, lookupErr := exec.LookPath("ctags")
+		if lookupErr != nil {
+			fmt.Fprintln(stderr, "itoc: warning: ctags not found; identifier-based test discovery skipped")
+		}
+		cs, e = expandTestCandidates(strings.TrimSpace(root), cs, ctagsPath, stderr)
+		if e != nil {
+			return e
+		}
 	}
 	cs = prepareCandidates(cs, config.candidateOptions)
 	return writeCandidatesWithEvidence(stdout, cs, config.format, config.verbose)

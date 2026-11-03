@@ -12,7 +12,7 @@ func TestParseCLIDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if path != "docs/adr.md" || got.format != "text" || got.limit != 10 || got.minScore != 0 {
+	if path != "docs/adr.md" || got.format != "text" || got.limit != 10 || got.minScore != 0 || !got.discoverTests {
 		t.Fatalf("config=%#v path=%q", got, path)
 	}
 }

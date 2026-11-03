@@ -30,6 +30,8 @@ The initial implementation supports both Git-backed co-change discovery and dete
 
 ## Noise and Evidence Quality
 
+Evaluate ways to discover test candidates from implementation candidates using separate evidence from symbol names, file naming and Git co-changes. A textual occurrence of a symbol is not a resolved reference or proof that a test covers the implementation. Also evaluate ranking document clues by match type and frequency while preserving their evidence. Common terms should not be excluded solely because of frequency, and weights should be chosen through evaluation rather than assumed. The [evaluation plan](discovery-evaluation.md) describes the proposed experiments; test discovery has an initial implementation, while document-clue ranking remains a direction for investigation. Future work may improve language-aware discovery accuracy.
+
 Git history contains changes that can obscure semantic relationships, including bulk linter or formatter application, package updates, and refactoring that only renames or moves files. Distinguishing these from changes that express or implement intent is a key product challenge.
 
 Potential signals include commit messages and comments, change shape, file moves, and other repository evidence. Jev may be explored as a way to classify whether a change is noise. The classification approach is not yet decided; the tool should preserve the evidence behind its decisions so users can review them.
