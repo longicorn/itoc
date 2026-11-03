@@ -31,6 +31,9 @@ func run(args []string, stdout, stderr io.Writer, lister PathLister) error {
 	if err != nil {
 		return err
 	}
+	if config.search != "" {
+		return searchKeyword(config.search, config.format, stdout)
+	}
 	methods, _ := parseDiscoveryMethods(config.discovery)
 	var tasks []namedLister
 	for _, method := range methods {

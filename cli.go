@@ -8,6 +8,7 @@ import (
 )
 
 type cliConfig struct {
+	search        string
 	format        string
 	discovery     string
 	verbose       bool
@@ -19,6 +20,7 @@ func parseCLI(args []string, output io.Writer) (cliConfig, string, error) {
 	var config cliConfig
 	fs := flag.NewFlagSet("itoc", flag.ContinueOnError)
 	fs.SetOutput(output)
+	fs.StringVar(&config.search, "search", "", "keyword search placeholder")
 	fs.StringVar(&config.format, "format", "text", "output format: text or json")
 	fs.StringVar(&config.discovery, "discovery", "git", "comma-separated discovery methods or all")
 	fs.BoolVar(&config.discoverTests, "discover-tests", true, "find test candidates from implementation candidates")
@@ -36,7 +38,19 @@ func parseCLI(args []string, output io.Writer) (cliConfig, string, error) {
 	if err := fs.Parse(args); err != nil {
 		return config, "", err
 	}
-	if fs.NArg() != 1 {
+	searchSet := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "search" {
+			searchSet = true
+		}
+	})
+	if searchSet && config.search == "" {
+		return config, "", errors.New("--search requires a non-empty keyword")
+	}
+	if searchSet && fs.NArg() != 0 {
+		return config, "", errors.New("--search cannot be combined with a repository file")
+	}
+	if !searchSet && fs.NArg() != 1 {
 		return config, "", errors.New("expected exactly one repository file")
 	}
 	if config.format != "text" && config.format != "json" {
@@ -59,7 +73,9 @@ func parseCLI(args []string, output io.Writer) (cliConfig, string, error) {
 
 func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "Usage: itoc [options] <repository-file>")
+	fmt.Fprintln(out, "       itoc [options] --search <keyword>")
 	fmt.Fprintln(out, "\nOptions:")
+	fmt.Fprintln(out, "  --search KEYWORD            Keyword search placeholder")
 	fmt.Fprintln(out, "  --format text|json          Output format (default: text)")
 	fmt.Fprintln(out, "  --discovery METHODS         Comma-separated methods or all (default: git)")
 	fmt.Fprintln(out, "  --discover-tests=false      Disable expansion of implementation candidates to tests")
