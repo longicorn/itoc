@@ -10,7 +10,7 @@ Given an explicitly supplied keyword, itoc should find candidate repository path
 
 These results are starting candidates. Further exploration of relationships from a selected path belongs to [discovery](../discovery.md). The user or a consuming workflow decides which candidates to investigate or accept; keyword search does not determine the scope of an assessment.
 
-The proposed CLI forms are `itoc [options] <file-path>` and `itoc [options] --search <keyword>`. The explicit option avoids interpreting a nonexistent path as a keyword. The CLI also accepts `--search <keyword>` as a placeholder. It reports that search is not implemented and does not run discovery or scoring.
+The proposed CLI forms are `itoc [options] <file-path>` and `itoc [options] --search <keyword>`. The explicit option avoids interpreting a nonexistent path as a keyword. The CLI also accepts `--search <keyword>` as an experimental entry point.
 
 ## Open questions
 
@@ -20,3 +20,7 @@ The proposed CLI forms are `itoc [options] <file-path>` and `itoc [options] --se
 - How should empty, invalid, or unsuccessful searches be reported?
 
 Implementation techniques and the relationship to `keyword.go` remain design decisions. Explore them incrementally using concrete examples and evaluation.
+
+## Experimental implementation
+
+In a Git repository, `--search` uses literal content matches in tracked files. One matching path is selected automatically; for multiple paths, the user selects a numbered entry. The selected path is passed to discovery. Prompts go to stderr; no matches stop the workflow. Non-Git repositories and path matching remain future work.

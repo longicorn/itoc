@@ -2,7 +2,7 @@
 
 ## Status
 
-Direction accepted; search and filtering details remain open. A CLI placeholder is available; it does not search.
+Direction accepted; search and filtering details remain open. An experimental CLI connection is available.
 
 ## Context
 
@@ -12,7 +12,7 @@ A user may know a feature name or displayed text without knowing a repository pa
 
 - Accept an explicitly supplied keyword and return candidate repository paths with evidence identifying what matched and where.
 - Treat these paths as starting candidates. Further relationship exploration belongs to [discovery](../discovery.md); the user or consuming workflow chooses which candidates to investigate or accept.
-- Use `itoc [options] --search <keyword>` as the proposed keyword CLI form alongside `itoc [options] <file-path>`. Explicit selection avoids interpreting a nonexistent path as a keyword. The placeholder reports that search is not implemented without invoking discovery or scoring.
+- Use `itoc [options] --search <keyword>` as the proposed keyword CLI form alongside `itoc [options] <file-path>`. Explicit selection avoids interpreting a nonexistent path as a keyword. The experimental CLI connects search to discovery.
 
 ## Consequences and exploration
 
@@ -28,4 +28,7 @@ Literal matching is straightforward to inspect but can miss alternate terminolog
 - How should empty or invalid input and searches with no matches be reported?
 - Which implementation techniques should be used, and how should they relate to the proposed `keyword.go`?
 
-The existing candidate output assumes scores and Git co-change evidence. The placeholder has a separate response so it does not imply that an empty search was performed. The result model, output format, and connection to discovery remain to be designed when search is implemented.
+
+## Experimental connection
+
+Use `git grep` for literal content matches in tracked files. Automatically select a single path or prompt for a numbered selection when several match, then pass the path to discovery. Display the list and prompt on stderr. Stop when no paths match. Non-Git support and path matching are deferred. This is an experiment; the result model and selection interface remain open to redesign.
