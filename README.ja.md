@@ -12,12 +12,12 @@
 
 各semantic pathが担当する現行実装については、以下を参照してください。
 
-- [`/analysis`](docs/analysis.ja.md)
-- [`/cli`](docs/cli.ja.md)
-- [`/discovery`](docs/discovery.ja.md)
-- [`/discovery/git`](docs/discovery/git.ja.md)
-- [`/filter`](docs/filter.ja.md)
-- [`/output`](docs/output.ja.md)
+- [`/analysis`](docs/analysis/prd.ja.md)
+- [`/cli`](docs/cli/prd.ja.md)
+- [`/discovery`](docs/discovery/prd.ja.md)
+- [`/discovery/git`](docs/discovery/git/prd.ja.md)
+- [`/filter`](docs/filter/prd.ja.md)
+- [`/output`](docs/output/prd.ja.md)
 
 各ページでは現行の動作と製品全体の将来方針を区別しています。全体方針は[製品要求仕様書](docs/prd.ja.md)を参照してください。
 
@@ -37,7 +37,7 @@ commit済みのリポジトリ内ファイルを指定すると、Git履歴上�
 
 結果は実装・テスト・文書の候補に分けて表示します。既定では各グループ上位10件です。`--limit 5`で件数を減らし、`--limit 0`で全件を表示できます。JSON形式は`--format json`で指定します。
 
-実装候補からファイル名とGitの同時変更を手掛かりにテスト候補も探します。JSON出力に対応したUniversal Ctagsがあれば、識別子の一致も手掛かりに加わり、より多くの関連候補を見つけられる可能性があります。利用できない場合は警告を出し、ほかの方法で探索を続けます。機械的な探索には誤検知や見落としがあり、一致はテストによる検証を保証しません。テスト候補を隠すには`--exclude-candidate test`、実装候補からのテスト探索を止めるには`--discover-tests=false`を指定します。
+実装候補からファイル名とGitの同時変更を手掛かりにテスト候補も探します。[Ctagsによる識別子の一致](docs/discovery/ctags/prd.ja.md)も手掛かりに加わります。機械的な探索には誤検知や見落としがあり、一致はテストによる検証を保証しません。テスト候補を隠すには`--exclude-candidate test`、実装候補からのテスト探索を止めるには`--discover-tests=false`を指定します。
 
 `--min-score N`で最低scoreを指定できます。`--limit`と併用すると、scoreで絞り込んだ後に各グループ上位N件を表示します。
 

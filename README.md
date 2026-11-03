@@ -12,12 +12,12 @@ See the [product requirements](docs/prd.md) for the current direction.
 
 The component pages describe the current implementation behind these semantic paths:
 
-- [`/analysis`](docs/analysis.md)
-- [`/cli`](docs/cli.md)
-- [`/discovery`](docs/discovery.md)
-- [`/discovery/git`](docs/discovery/git.md)
-- [`/filter`](docs/filter.md)
-- [`/output`](docs/output.md)
+- [`/analysis`](docs/analysis/prd.md)
+- [`/cli`](docs/cli/prd.md)
+- [`/discovery`](docs/discovery/prd.md)
+- [`/discovery/git`](docs/discovery/git/prd.md)
+- [`/filter`](docs/filter/prd.md)
+- [`/output`](docs/output/prd.md)
 
 They distinguish current behavior from broader product direction in the [PRD](docs/prd.md).
 
@@ -36,7 +36,7 @@ Pass a committed repository file to discover files changed alongside it in Git h
 ```
 
 Results are grouped into implementation, test, and document candidates. The default limit is 10 candidates per group; use `--limit 5` to show fewer or `--limit 0` to show all. JSON output is available with `--format json`.
-Test candidates are also discovered from implementation candidates by filename and Git co-changes. When Universal Ctags with JSON output is available, identifier matches provide additional candidates that may improve discovery; if it is unavailable, itoc warns and continues with the other methods. These mechanical matches can produce false positives and miss relevant files; a match does not prove test coverage. Use `--exclude-candidate test` to hide test candidates, or `--discover-tests=false` to disable this expansion.
+Test candidates are also discovered from implementation candidates by filename and Git co-changes. [Ctags identifier matches](docs/discovery/ctags/prd.md) provide additional clues. These mechanical matches can produce false positives and miss relevant files; a match does not prove test coverage. Use `--exclude-candidate test` to hide test candidates, or `--discover-tests=false` to disable this expansion.
 
 Use `--min-score N` to require a minimum candidate score. When combined with `--limit`, the score filter is applied first, then the top N results per group are shown.
 
