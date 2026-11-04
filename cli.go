@@ -13,6 +13,7 @@ type cliConfig struct {
 	discovery     string
 	verbose       bool
 	discoverTests bool
+	allowDeleted  bool
 	candidateOptions
 }
 
@@ -24,6 +25,7 @@ func parseCLI(args []string, output io.Writer) (cliConfig, string, error) {
 	fs.StringVar(&config.format, "format", "text", "output format: text or json")
 	fs.StringVar(&config.discovery, "discovery", "git", "comma-separated discovery methods or all")
 	fs.BoolVar(&config.discoverTests, "discover-tests", true, "find test candidates from implementation candidates")
+	fs.BoolVar(&config.allowDeleted, "allow-deleted", false, "allow deleted input paths for Git discovery")
 	fs.BoolVar(&config.verbose, "verbose", false, "show evidence details")
 	fs.IntVar(&config.maxNoiseScore, "max-noise-score", 1, "hide candidates above this noise score")
 	fs.BoolVar(&config.showNoisy, "show-noisy", false, "include candidates hidden by the noise threshold")
@@ -79,6 +81,7 @@ func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "  --format text|json          Output format (default: text)")
 	fmt.Fprintln(out, "  --discovery METHODS         Comma-separated methods or all (default: git)")
 	fmt.Fprintln(out, "  --discover-tests=false      Disable expansion of implementation candidates to tests")
+	fmt.Fprintln(out, "  --allow-deleted             Allow deleted input paths for Git discovery")
 	fmt.Fprintln(out, "  --verbose                   Show evidence details")
 	fmt.Fprintln(out, "  --max-noise-score N         Hide candidates above noise score (default: 1)")
 	fmt.Fprintln(out, "  --show-noisy                Include candidates hidden by noise rules")

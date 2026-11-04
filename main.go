@@ -47,11 +47,24 @@ func runWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer, list
 		}
 	}
 	methods, _ := parseDiscoveryMethods(config.discovery)
+	if config.allowDeleted {
+		if _, statErr := os.Lstat(path); errors.Is(statErr, os.ErrNotExist) {
+			for _, method := range methods {
+				if method == "document" {
+					return fmt.Errorf("document discovery cannot use a deleted input: %s", path)
+				}
+			}
+		}
+	}
 	var tasks []namedLister
 	for _, method := range methods {
 		selected := discoveryRegistry[method]()
 		if method == "git" && lister != nil {
 			selected = lister
+		}
+		if gitLister, ok := selected.(discovery.GitPathLister); ok && method == "git" {
+			gitLister.AllowDeleted = config.allowDeleted
+			selected = gitLister
 		}
 		tasks = append(tasks, namedLister{name: method, lister: selected})
 	}
