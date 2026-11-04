@@ -8,7 +8,7 @@ Help users find candidate artifacts related to a repository path using inspectab
 
 Use commits affecting the target to identify supported code and document paths changed alongside it. Retain the supporting commits and message-derived noise evidence for downstream analysis and classification. Exclude the target itself and count a path at most once per commit.
 
-A deleted input path is out of scope. When a target is moved or renamed, discovery should start from its current destination and follow its history. The current implementation still resolves some deleted tracked paths from history, so it does not yet enforce the deleted-path policy.
+A deleted input path is rejected by default; `--allow-deleted` enables Git history discovery for paths found in history. When a target is moved or renamed, discovery should start from its current destination and follow its history.
 
 ## Current implementation
 

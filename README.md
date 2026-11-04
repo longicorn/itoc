@@ -60,3 +60,5 @@ Plain `--include-path` and `--exclude-path` values match anywhere in a repositor
 ## Documentation
 
 See [docs/](docs/) for product requirements and component documentation.
+
+Use `--allow-deleted` to discover relationships from Git history for a deleted input path. Deleted inputs cannot be combined with document discovery.

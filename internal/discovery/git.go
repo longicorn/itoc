@@ -16,7 +16,10 @@ type execGitRunner struct{}
 
 func (execGitRunner) Run(dir string, args ...string) (string, error) { return Git(dir, args...) }
 
-type GitPathLister struct{ runner GitRunner }
+type GitPathLister struct {
+	runner       GitRunner
+	AllowDeleted bool
+}
 
 func (l GitPathLister) run(dir string, args ...string) (string, error) {
 	if l.runner == nil {
@@ -75,8 +78,34 @@ func resolveGitTarget(cwd, root, input string, l GitPathLister) (string, error) 
 			break
 		}
 	}
+	if l.AllowDeleted {
+		abs, err := filepath.Abs(filepath.Join(cwd, input))
+		if filepath.IsAbs(input) {
+			abs, err = filepath.Abs(input)
+		}
+		if err != nil {
+			return "", err
+		}
+		rel, err := filepath.Rel(root, abs)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return "", fmt.Errorf("path is outside repository: %s", input)
+		}
+		if target == "" {
+			target = filepath.ToSlash(rel)
+			history, err := l.run(root, "log", "--follow", "--format=%H", "--", ":(literal)"+target)
+			if err != nil {
+				return "", err
+			}
+			if strings.TrimSpace(history) == "" {
+				return "", fmt.Errorf("path has no Git history: %s", input)
+			}
+		}
+	}
 	if target == "" {
 		return "", fmt.Errorf("path is not tracked in the Git working tree: %s", input)
+	}
+	if _, err := os.Lstat(filepath.Join(root, target)); err != nil && !(l.AllowDeleted && os.IsNotExist(err)) {
+		return "", fmt.Errorf("cannot access tracked path %s: %w", input, err)
 	}
 	return filepath.ToSlash(target), nil
 }
