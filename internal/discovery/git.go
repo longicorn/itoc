@@ -1,13 +1,20 @@
 package discovery
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
+
+	"itoc/internal/discovery/ctags"
 )
+
+var errPathNotTracked = errors.New("path is not tracked in the Git working tree")
 
 type GitRunner interface {
 	Run(dir string, args ...string) (string, error)
@@ -33,7 +40,20 @@ func (execGitRunner) RunInput(dir, input string, args ...string) (string, error)
 
 func NewGitPathLister(runner GitRunner) GitPathLister { return GitPathLister{runner: runner} }
 
-type GitPathLister struct{ runner GitRunner }
+type GitPathLister struct {
+	runner    GitRunner
+	follow    bool
+	ctagsPath string
+	warnings  io.Writer
+}
+
+func (l GitPathLister) WithFollow(follow bool) GitPathLister { l.follow = follow; return l }
+
+// WithRelocation enables symbol clues when Ctags is available.
+func (l GitPathLister) WithRelocation(ctagsPath string, warnings io.Writer) GitPathLister {
+	l.ctagsPath, l.warnings = ctagsPath, warnings
+	return l
+}
 
 func (l GitPathLister) run(dir string, args ...string) (string, error) {
 	if l.runner == nil {
@@ -55,10 +75,21 @@ func (l GitPathLister) List(input string) ([]Evidence, string, error) {
 
 	target, err := resolveGitTarget(cwd, root, input, l)
 	if err != nil {
-		return nil, "", err
+		if !errors.Is(err, errPathNotTracked) {
+			return nil, "", err
+		}
+		return l.findRelocations(cwd, root, input)
+	}
+	if _, statErr := os.Stat(filepath.Join(root, filepath.FromSlash(target))); os.IsNotExist(statErr) {
+		return l.findRelocations(cwd, root, input)
 	}
 
-	log, err := l.run(root, "log", "--follow", "--format=%H", "--", target)
+	args := []string{"log"}
+	if l.follow {
+		args = append(args, "--follow")
+	}
+	args = append(args, "--format=%H", "--", target)
+	log, err := l.run(root, args...)
 	if err != nil {
 		return nil, "", err
 	}
@@ -114,6 +145,96 @@ func (l GitPathLister) List(input string) ([]Evidence, string, error) {
 	return evidence, target, nil
 }
 
+// findRelocations compares the last historical contents of a missing path with
+// tracked working-tree files. Matches are clues, not confirmed renames.
+func (l GitPathLister) findRelocations(cwd, root, input string) ([]Evidence, string, error) {
+	abs, err := filepath.Abs(input)
+	if err != nil {
+		return nil, "", err
+	}
+	rel, err := filepath.Rel(root, abs)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return nil, "", fmt.Errorf("path outside repository: %s", input)
+	}
+	target := filepath.ToSlash(rel)
+	log, err := l.run(root, "log", "-1", "--format=%H", "--", target)
+	if err != nil {
+		return nil, "", err
+	}
+	id := strings.TrimSpace(log)
+	if id == "" {
+		return nil, "", fmt.Errorf("path has no Git history: %s", input)
+	}
+	old, err := l.run(root, "show", id+":"+target)
+	if err != nil {
+		old, err = l.run(root, "show", id+"^:"+target)
+	}
+	if err != nil {
+		return nil, "", fmt.Errorf("cannot read historical path %s: %w", target, err)
+	}
+	tracked, err := l.run(root, "ls-files", "-z", "--cached")
+	if err != nil {
+		return nil, "", err
+	}
+	var oldNames map[string]bool
+	if l.ctagsPath != "" && IsCode(target) {
+		dir, e := os.MkdirTemp("", "itoc-history-*")
+		if e != nil {
+			return nil, "", e
+		}
+		defer os.RemoveAll(dir)
+		oldPath := filepath.Join(dir, filepath.Base(target))
+		if e = os.WriteFile(oldPath, []byte(old), 0600); e != nil {
+			return nil, "", e
+		}
+		oldNames, e = ctags.Names(l.ctagsPath, oldPath)
+		if e != nil && l.warnings != nil {
+			fmt.Fprintf(l.warnings, "itoc: warning: ctags failed for historical %s: %v\n", target, e)
+		}
+	} else if IsCode(target) && l.warnings != nil {
+		fmt.Fprintln(l.warnings, "itoc: warning: ctags not found; symbol-based relocation discovery skipped")
+	}
+	var evidence []Evidence
+	seen := map[string]bool{}
+	for _, path := range strings.Split(tracked, "\x00") {
+		if path == "" || path == target || seen[path] || (!IsCode(path) && !IsDocument(path)) {
+			continue
+		}
+		seen[path] = true
+		full := filepath.Join(root, filepath.FromSlash(path))
+		data, e := os.ReadFile(full)
+		if e != nil {
+			continue
+		}
+		var details []string
+		if filepath.Base(path) == filepath.Base(target) {
+			details = append(details, "same filename as historical "+target)
+		}
+		if string(data) == old {
+			details = append(details, "identical content to historical "+target)
+		}
+		if len(oldNames) > 0 && IsCode(path) && filepath.Ext(path) == filepath.Ext(target) {
+			names, e := ctags.Names(l.ctagsPath, full)
+			if e == nil {
+				var shared []string
+				for n := range names {
+					if oldNames[n] {
+						shared = append(shared, n)
+					}
+				}
+				sort.Strings(shared)
+				for _, n := range shared {
+					details = append(details, fmt.Sprintf("shared definition %q with historical %s", n, target))
+				}
+			}
+		}
+		if len(details) > 0 {
+			evidence = append(evidence, Evidence{Path: path, Details: details, Methods: []string{"git"}})
+		}
+	}
+	return evidence, target, nil
+}
+
 func resolveGitTarget(cwd, root, input string, l GitPathLister) (string, error) {
 	pathOut, err := l.run(cwd, "ls-files", "--full-name", "--", input)
 	if err != nil {
@@ -127,7 +248,7 @@ func resolveGitTarget(cwd, root, input string, l GitPathLister) (string, error) 
 		}
 	}
 	if target == "" {
-		return "", fmt.Errorf("path is not tracked in the Git working tree: %s", input)
+		return "", fmt.Errorf("%w: %s", errPathNotTracked, input)
 	}
 	return filepath.ToSlash(target), nil
 }

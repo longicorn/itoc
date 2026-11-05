@@ -52,7 +52,7 @@ func TestDiscoverTestsReusesDiffsAndPreservesOrder(t *testing.T) {
 		}
 	}
 	runner := &testHistoryRunner{calls: map[string]int{}}
-	got, err := discoverTests(root, []string{"a.go", "b.go"}, "", io.Discard, runner)
+	got, err := discoverTests(root, []string{"a.go", "b.go"}, "", io.Discard, runner, false)
 	if err != nil {
 		t.Fatal(err)
 	}

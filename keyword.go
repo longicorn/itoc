@@ -2,12 +2,14 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -18,18 +20,36 @@ func searchKeyword(keyword string, in io.Reader, diagnostic io.Writer) (string, 
 		return "", fmt.Errorf("keyword search requires a Git repository: %w", err)
 	}
 	root := strings.TrimSpace(string(rootBytes))
-	cmd := exec.Command("git", "grep", "-l", "-z", "-F", "-e", keyword, "--")
+	cmd := exec.Command("git", "ls-files", "-z", "--cached")
 	cmd.Dir = root
 	output, err := cmd.Output()
 	if err != nil {
-		var exit *exec.ExitError
-		if errors.As(err, &exit) && exit.ExitCode() == 1 {
-			_, err = fmt.Fprintln(diagnostic, "No matching files found.")
-			return "", err
-		}
 		return "", fmt.Errorf("keyword search failed: %w", err)
 	}
-	paths := strings.Split(strings.TrimSuffix(string(output), "\x00"), "\x00")
+	var paths []string
+	seen := map[string]bool{}
+	for _, path := range strings.Split(string(output), "\x00") {
+		if path == "" || seen[path] {
+			continue
+		}
+		seen[path] = true
+		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(path)))
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return "", fmt.Errorf("keyword search %s: %w", path, err)
+		}
+		if bytes.Contains(data, []byte(keyword)) {
+			paths = append(paths, path)
+		}
+	}
+	sort.Strings(paths)
+	if len(paths) == 0 {
+		_, err = fmt.Fprintln(diagnostic, "No matching files found.")
+		return "", err
+	}
+
 	index := 0
 	if len(paths) > 1 {
 		for i, path := range paths {

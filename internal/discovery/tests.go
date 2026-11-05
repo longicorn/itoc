@@ -17,7 +17,11 @@ import (
 // deliberately separate from independent document discovery.
 // DiscoverTests collects derived clues for test paths associated with implementation paths.
 func DiscoverTests(root string, implementations []string, ctagsPath string, warnings io.Writer) ([]Evidence, error) {
-	return discoverTests(root, implementations, ctagsPath, warnings, execGitRunner{})
+	return DiscoverTestsWithFollow(root, implementations, ctagsPath, warnings, false)
+}
+
+func DiscoverTestsWithFollow(root string, implementations []string, ctagsPath string, warnings io.Writer, follow bool) ([]Evidence, error) {
+	return discoverTests(root, implementations, ctagsPath, warnings, execGitRunner{}, follow)
 }
 
 type testGitRunner interface {
@@ -25,7 +29,7 @@ type testGitRunner interface {
 	RunInput(dir, input string, args ...string) (string, error)
 }
 
-func discoverTests(root string, implementations []string, ctagsPath string, warnings io.Writer, runner testGitRunner) ([]Evidence, error) {
+func discoverTests(root string, implementations []string, ctagsPath string, warnings io.Writer, runner testGitRunner, follow bool) ([]Evidence, error) {
 	var tests []string
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -85,7 +89,12 @@ func discoverTests(root string, implementations []string, ctagsPath string, warn
 
 		}
 
-		log, e := runner.Run(root, "log", "--format=%H", "--follow", "--", impl)
+		args := []string{"log", "--format=%H"}
+		if follow {
+			args = append(args, "--follow")
+		}
+		args = append(args, "--", impl)
+		log, e := runner.Run(root, args...)
 		if e != nil {
 			return nil, e
 		}

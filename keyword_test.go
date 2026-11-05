@@ -34,6 +34,9 @@ func TestKeywordSearch(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git add: %s: %v", out, err)
 	}
+	if err := os.WriteFile(filepath.Join(root, "untracked.txt"), []byte("untracked-only"), 0600); err != nil {
+		t.Fatal(err)
+	}
 	previous, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -42,7 +45,7 @@ func TestKeywordSearch(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chdir(previous) })
-	for _, tc := range []struct{ keyword, input, want string }{{"unique", "", "c.txt"}, {"needle", "2\n", "b.txt"}, {"absent", "", ""}} {
+	for _, tc := range []struct{ keyword, input, want string }{{"unique", "", "c.txt"}, {"needle", "2\n", "b.txt"}, {"absent", "", ""}, {"untracked-only", "", ""}} {
 		var diag bytes.Buffer
 		got, err := searchKeyword(tc.keyword, strings.NewReader(tc.input), &diag)
 		if err != nil || got != tc.want {
