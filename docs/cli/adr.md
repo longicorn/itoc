@@ -25,3 +25,7 @@ A shared workflow gives methods consistent filtering and presentation while reta
 - How should agreement between discovery methods be evaluated and weighted?
 - How should keyword search candidates be selected and passed into discovery as that experiment evolves?
 - Which defaults and controls best balance missed candidates against review effort?
+
+## Optional history tracking
+
+`--follow` enables Git rename-following history; it is disabled by default. Default relocation clues and explicit history tracking are separate evidence sources.

@@ -59,8 +59,14 @@ func runWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer, list
 	var tasks []namedLister
 	for _, method := range methods {
 		selected := discoveryRegistry[method]()
-		if method == "git" && lister != nil {
-			selected = lister
+		if method == "git" {
+			if lister != nil {
+				selected = lister
+			}
+			if gitLister, ok := selected.(discovery.GitPathLister); ok {
+				ctagsPath, _ := exec.LookPath("ctags")
+				selected = gitLister.WithFollow(config.follow).WithRelocation(ctagsPath, stderr)
+			}
 		}
 		if gitLister, ok := selected.(discovery.GitPathLister); ok && method == "git" {
 			gitLister.AllowDeleted = config.allowDeleted
@@ -90,7 +96,7 @@ func runWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer, list
 		if lookupErr != nil {
 			fmt.Fprintln(stderr, "itoc: warning: ctags not found; identifier-based test discovery skipped")
 		}
-		cs, e = expandTestCandidates(strings.TrimSpace(root), cs, ctagsPath, stderr)
+		cs, e = expandTestCandidatesWithFollow(strings.TrimSpace(root), cs, ctagsPath, stderr, config.follow)
 		if e != nil {
 			return e
 		}

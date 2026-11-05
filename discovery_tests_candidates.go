@@ -7,6 +7,10 @@ import (
 
 // expandTestCandidates merges derived test clues without changing existing scores.
 func expandTestCandidates(root string, candidates []candidate, ctagsPath string, warnings io.Writer) ([]candidate, error) {
+	return expandTestCandidatesWithFollow(root, candidates, ctagsPath, warnings, false)
+}
+
+func expandTestCandidatesWithFollow(root string, candidates []candidate, ctagsPath string, warnings io.Writer, follow bool) ([]candidate, error) {
 	implementations := make([]string, 0, len(candidates))
 	byPath := make(map[string]*candidate, len(candidates))
 	for _, item := range candidates {
@@ -16,7 +20,7 @@ func expandTestCandidates(root string, candidates []candidate, ctagsPath string,
 			implementations = append(implementations, c.path)
 		}
 	}
-	evidence, err := discovery.DiscoverTests(root, implementations, ctagsPath, warnings)
+	evidence, err := discovery.DiscoverTestsWithFollow(root, implementations, ctagsPath, warnings, follow)
 	if err != nil {
 		return nil, err
 	}

@@ -10,7 +10,7 @@ See the [product requirements](docs/prd.md) for the current direction.
 
 ## Installation
 
-Install Go 1.23 or later and Git, then build and install the CLI from the repository root:
+Install Go 1.26 or later and Git, then build and install the CLI from the repository root:
 
 ```sh
 go install .
@@ -61,4 +61,5 @@ Plain `--include-path` and `--exclude-path` values match anywhere in a repositor
 
 See [docs/](docs/) for product requirements and component documentation.
 
-Use `--allow-deleted` to discover relationships from Git history for a deleted input path. Deleted inputs cannot be combined with document discovery.
+By default Git discovery uses the current path’s history. Pass `--follow` to include history across renames in Git and test discovery. For a missing historical path, the tool can report current tracked files with matching filenames, identical contents or shared Ctags definitions as relocation candidates. These clues can miss moves or match unrelated files.
+Use `--allow-deleted` to discover relationships from Git history for a deleted input path instead of searching for relocation candidates. Deleted inputs cannot be combined with document discovery.

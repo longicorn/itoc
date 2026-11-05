@@ -1,14 +1,15 @@
 package discovery
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"itoc/internal/discovery/ctags"
 )
@@ -17,6 +18,19 @@ import (
 // deliberately separate from independent document discovery.
 // DiscoverTests collects derived clues for test paths associated with implementation paths.
 func DiscoverTests(root string, implementations []string, ctagsPath string, warnings io.Writer) ([]Evidence, error) {
+	return DiscoverTestsWithFollow(root, implementations, ctagsPath, warnings, false)
+}
+
+func DiscoverTestsWithFollow(root string, implementations []string, ctagsPath string, warnings io.Writer, follow bool) ([]Evidence, error) {
+	return discoverTests(root, implementations, ctagsPath, warnings, execGitRunner{}, follow)
+}
+
+type testGitRunner interface {
+	GitRunner
+	RunInput(dir, input string, args ...string) (string, error)
+}
+
+func discoverTests(root string, implementations []string, ctagsPath string, warnings io.Writer, runner testGitRunner, follow bool) ([]Evidence, error) {
 	var tests []string
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -37,6 +51,7 @@ func DiscoverTests(root string, implementations []string, ctagsPath string, warn
 		}
 		return nil
 	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -48,6 +63,7 @@ func DiscoverTests(root string, implementations []string, ctagsPath string, warn
 		}
 		contents[p] = b
 	}
+
 	byPath := map[string]*Evidence{}
 	add := func(p, detail string) {
 		item := byPath[p]
@@ -57,11 +73,13 @@ func DiscoverTests(root string, implementations []string, ctagsPath string, warn
 		}
 		item.Details = AppendUnique(item.Details, detail)
 	}
+	diffs := make(map[string]string)
 	for _, impl := range implementations {
 		abs := filepath.Join(root, filepath.FromSlash(impl))
 		if st, e := os.Stat(abs); e != nil || !st.Mode().IsRegular() {
 			continue
 		}
+
 		stem := strings.TrimSuffix(filepath.Base(impl), filepath.Ext(impl))
 		names := map[string]bool{}
 		if ctagsPath != "" {
@@ -75,17 +93,23 @@ func DiscoverTests(root string, implementations []string, ctagsPath string, warn
 
 		}
 
-		log, e := Git(root, "log", "--format=%H", "--follow", "--", impl)
+		args := []string{"log", "--format=%H"}
+		if follow {
+			args = append(args, "--follow")
+		}
+		args = append(args, "--", impl)
+		log, e := runner.Run(root, args...)
 		if e != nil {
 			return nil, e
 		}
+		ids := strings.Fields(log)
+		err := loadCommitDiffs(root, ids, diffs, runner)
+		if err != nil {
+			return nil, err
+		}
 		changed := map[string][]string{}
-		for _, id := range strings.Fields(log) {
-			files, err := Git(root, "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", id)
-			if err != nil {
-				return nil, err
-			}
-			for _, p := range strings.Split(files, "\n") {
+		for _, id := range ids {
+			for _, p := range strings.Split(diffs[id], "\n") {
 				changed[p] = append(changed[p], id)
 			}
 		}
@@ -95,33 +119,98 @@ func DiscoverTests(root string, implementations []string, ctagsPath string, warn
 			ordered = append(ordered, n)
 		}
 		sort.Strings(ordered)
-		for _, p := range tests {
-			testStem := strings.TrimSuffix(filepath.Base(p), filepath.Ext(p))
-			normalized := strings.TrimSuffix(strings.TrimPrefix(testStem, "test_"), "_test")
-			normalized = strings.TrimSuffix(normalized, "_spec")
-			normalized = strings.TrimSuffix(normalized, ".test")
-			normalized = strings.TrimSuffix(normalized, ".spec")
-			if stem == normalized && filepath.Ext(p) == filepath.Ext(impl) {
-				add(p, fmt.Sprintf("test filename matches implementation %s", impl))
-			}
-			for _, id := range changed[p] {
-				add(p, fmt.Sprintf("Git co-change with implementation %s in commit %s", impl, id))
-			}
-			lines := bytes.Split(contents[p], []byte("\n"))
-			for i, line := range lines {
-				for _, n := range ordered {
-					if containsIdentifier(string(line), n) {
-						add(p, fmt.Sprintf("textual identifier %q from %s at %s:%d", n, impl, p, i+1))
-					}
+		matcher := newIdentifierMatcher(ordered)
+		// Bound the number of retained results and merge them in test order.
+		for first := 0; first < len(tests); first += 32 {
+			end := min(first+32, len(tests))
+			batch := tests[first:end]
+			matches := make([][]identifierMatch, len(batch))
+
+			if len(matcher.states) > 1 {
+				jobs := make(chan int)
+				var workers sync.WaitGroup
+				count := min(8, runtime.GOMAXPROCS(0), len(batch))
+				for i := 0; i < count; i++ {
+					workers.Add(1)
+					go func() {
+						defer workers.Done()
+						for index := range jobs {
+							matches[index] = matcher.find(contents[batch[index]])
+						}
+					}()
 				}
+				for i := range batch {
+					jobs <- i
+				}
+				close(jobs)
+				workers.Wait()
+			}
+
+			for index, p := range batch {
+				testStem := strings.TrimSuffix(filepath.Base(p), filepath.Ext(p))
+				normalized := strings.TrimSuffix(strings.TrimPrefix(testStem, "test_"), "_test")
+				normalized = strings.TrimSuffix(normalized, "_spec")
+				normalized = strings.TrimSuffix(normalized, ".test")
+				normalized = strings.TrimSuffix(normalized, ".spec")
+				if stem == normalized && filepath.Ext(p) == filepath.Ext(impl) {
+					add(p, fmt.Sprintf("test filename matches implementation %s", impl))
+				}
+				for _, id := range changed[p] {
+					add(p, fmt.Sprintf("Git co-change with implementation %s in commit %s", impl, id))
+				}
+
+				for _, match := range matches[index] {
+					add(p, fmt.Sprintf("textual identifier %q from %s at %s:%d", match.name, impl, p, match.line))
+				}
+
 			}
 		}
+
 	}
 	out := make([]Evidence, 0, len(byPath))
 	for _, c := range byPath {
 		out = append(out, *c)
 	}
 	return out, nil
+}
+
+// loadCommitDiffs reuses results and fetches missing commits in one Git process.
+func loadCommitDiffs(root string, ids []string, cache map[string]string, runner testGitRunner) error {
+	var missing []string
+	seen := make(map[string]bool)
+	for _, id := range ids {
+		if _, ok := cache[id]; !ok && !seen[id] {
+			missing = append(missing, id)
+			seen[id] = true
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	output, err := runner.RunInput(root, strings.Join(missing, "\n")+"\n", "diff-tree", "--stdin", "--root", "--name-only", "-r", "--format=%x00%H%x00")
+	if err != nil {
+		return err
+	}
+	// Merge commits may produce no output, just as with the original command.
+	for _, id := range missing {
+		cache[id] = ""
+	}
+	parts := strings.Split(output, "\x00")
+	if parts[0] != "" {
+		return fmt.Errorf("unexpected git diff-tree output")
+	}
+	for i := 1; i < len(parts); i += 2 {
+		if i+1 >= len(parts) || !seen[parts[i]] || !strings.HasPrefix(parts[i+1], "\n\n") {
+			return fmt.Errorf("unexpected git diff-tree output")
+		}
+		cache[parts[i]] = strings.TrimPrefix(parts[i+1], "\n\n")
+	}
+	return nil
+}
+
+type identifierMatch struct {
+	line int
+	name string
 }
 
 func containsIdentifier(line, name string) bool {
