@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 
 	"itoc/internal/discovery/ctags"
 )
@@ -21,7 +20,12 @@ func DiscoverTests(root string, implementations []string, ctagsPath string, warn
 	return discoverTests(root, implementations, ctagsPath, warnings, execGitRunner{})
 }
 
-func discoverTests(root string, implementations []string, ctagsPath string, warnings io.Writer, runner GitRunner) ([]Evidence, error) {
+type testGitRunner interface {
+	GitRunner
+	RunInput(dir, input string, args ...string) (string, error)
+}
+
+func discoverTests(root string, implementations []string, ctagsPath string, warnings io.Writer, runner testGitRunner) ([]Evidence, error) {
 	var tests []string
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -130,9 +134,8 @@ func discoverTests(root string, implementations []string, ctagsPath string, warn
 	return out, nil
 }
 
-// loadCommitDiffs reuses successful results across implementations and reports
-// errors in commit order, independent of worker completion order.
-func loadCommitDiffs(root string, ids []string, cache map[string]string, runner GitRunner) error {
+// loadCommitDiffs reuses results and fetches missing commits in one Git process.
+func loadCommitDiffs(root string, ids []string, cache map[string]string, runner testGitRunner) error {
 	var missing []string
 	seen := make(map[string]bool)
 	for _, id := range ids {
@@ -141,33 +144,26 @@ func loadCommitDiffs(root string, ids []string, cache map[string]string, runner 
 			seen[id] = true
 		}
 	}
-	type result struct {
-		files string
-		err   error
+	if len(missing) == 0 {
+		return nil
 	}
-	results := make([]result, len(missing))
-	jobs := make(chan int)
-	var workers sync.WaitGroup
-	count := min(8, len(missing))
-	for i := 0; i < count; i++ {
-		workers.Add(1)
-		go func() {
-			defer workers.Done()
-			for i := range jobs {
-				results[i].files, results[i].err = runner.Run(root, "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", missing[i])
-			}
-		}()
+	output, err := runner.RunInput(root, strings.Join(missing, "\n")+"\n", "diff-tree", "--stdin", "--root", "--name-only", "-r", "--format=%x00%H%x00")
+	if err != nil {
+		return err
 	}
-	for i := range missing {
-		jobs <- i
+	// Merge commits may produce no output, just as with the original command.
+	for _, id := range missing {
+		cache[id] = ""
 	}
-	close(jobs)
-	workers.Wait()
-	for i, id := range missing {
-		if results[i].err != nil {
-			return results[i].err
+	parts := strings.Split(output, "\x00")
+	if parts[0] != "" {
+		return fmt.Errorf("unexpected git diff-tree output")
+	}
+	for i := 1; i < len(parts); i += 2 {
+		if i+1 >= len(parts) || !seen[parts[i]] || !strings.HasPrefix(parts[i+1], "\n\n") {
+			return fmt.Errorf("unexpected git diff-tree output")
 		}
-		cache[id] = results[i].files
+		cache[parts[i]] = strings.TrimPrefix(parts[i+1], "\n\n")
 	}
 	return nil
 }

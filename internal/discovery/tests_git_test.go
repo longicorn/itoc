@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -26,9 +27,21 @@ func (r *testHistoryRunner) Run(_ string, args ...string) (string, error) {
 		}
 		return "c1\nc3\n", nil
 	}
-	id := args[len(args)-1]
-	r.calls[id]++
-	return "a_test.go\n", r.failures[id]
+	return "", nil
+}
+
+func (r *testHistoryRunner) RunInput(_ string, input string, _ ...string) (string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var out strings.Builder
+	for _, id := range strings.Fields(input) {
+		r.calls[id]++
+		if err := r.failures[id]; err != nil {
+			return "", err
+		}
+		out.WriteString("\x00" + id + "\x00\n\na_test.go\n")
+	}
+	return out.String(), nil
 }
 
 func TestDiscoverTestsReusesDiffsAndPreservesOrder(t *testing.T) {
@@ -62,10 +75,64 @@ func TestDiscoverTestsReusesDiffsAndPreservesOrder(t *testing.T) {
 	}
 }
 
-func TestLoadCommitDiffsReturnsFirstErrorInCommitOrder(t *testing.T) {
+func TestLoadCommitDiffsReturnsBatchError(t *testing.T) {
 	first, second := errors.New("first"), errors.New("second")
 	runner := &testHistoryRunner{calls: map[string]int{}, failures: map[string]error{"c2": first, "c1": second}}
 	if err := loadCommitDiffs("", []string{"c2", "c1"}, map[string]string{}, runner); !errors.Is(err, first) {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestBatchDiffMatchesIndividualGitCommands(t *testing.T) {
+	root := t.TempDir()
+	git := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = root
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v: %s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	git("init", "-q")
+	git("config", "user.name", "Test")
+	git("config", "user.email", "test@example.com")
+	write := func(name, contents string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(root, name), []byte(contents), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("a_test.go", "one")
+	git("add", ".")
+	git("commit", "-qm", "root")
+	base := git("rev-parse", "HEAD")
+	git("checkout", "-qb", "feature")
+	write("feature.go", "feature")
+	git("add", ".")
+	git("commit", "-qm", "feature")
+	feature := git("rev-parse", "HEAD")
+	git("checkout", "-q", "--detach", base)
+	write("main.go", "main")
+	git("add", ".")
+	git("commit", "-qm", "main")
+	git("merge", "--no-ff", "-qm", "merge", "feature")
+	merge := git("rev-parse", "HEAD")
+	git("commit", "--allow-empty", "-qm", "empty")
+	empty := git("rev-parse", "HEAD")
+	ids := []string{base, feature, merge, empty}
+	cache := map[string]string{}
+	if err := loadCommitDiffs(root, ids, cache, execGitRunner{}); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range ids {
+		want, err := Git(root, "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cache[id] != want {
+			t.Errorf("commit %s: got %q, want %q", id, cache[id], want)
+		}
 	}
 }

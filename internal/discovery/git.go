@@ -17,6 +17,20 @@ type execGitRunner struct{}
 
 func (execGitRunner) Run(dir string, args ...string) (string, error) { return Git(dir, args...) }
 
+func (execGitRunner) RunInput(dir, input string, args ...string) (string, error) {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	cmd.Stdin = strings.NewReader(input)
+	b, err := cmd.Output()
+	if err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			return "", fmt.Errorf("git %s: %s", strings.Join(args, " "), strings.TrimSpace(string(ee.Stderr)))
+		}
+		return "", err
+	}
+	return string(b), nil
+}
+
 func NewGitPathLister(runner GitRunner) GitPathLister { return GitPathLister{runner: runner} }
 
 type GitPathLister struct{ runner GitRunner }
