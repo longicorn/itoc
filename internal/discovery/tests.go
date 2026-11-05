@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"itoc/internal/discovery/ctags"
 )
@@ -17,6 +18,10 @@ import (
 // deliberately separate from independent document discovery.
 // DiscoverTests collects derived clues for test paths associated with implementation paths.
 func DiscoverTests(root string, implementations []string, ctagsPath string, warnings io.Writer) ([]Evidence, error) {
+	return discoverTests(root, implementations, ctagsPath, warnings, execGitRunner{})
+}
+
+func discoverTests(root string, implementations []string, ctagsPath string, warnings io.Writer, runner GitRunner) ([]Evidence, error) {
 	var tests []string
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -57,6 +62,7 @@ func DiscoverTests(root string, implementations []string, ctagsPath string, warn
 		}
 		item.Details = AppendUnique(item.Details, detail)
 	}
+	diffs := make(map[string]string)
 	for _, impl := range implementations {
 		abs := filepath.Join(root, filepath.FromSlash(impl))
 		if st, e := os.Stat(abs); e != nil || !st.Mode().IsRegular() {
@@ -75,17 +81,17 @@ func DiscoverTests(root string, implementations []string, ctagsPath string, warn
 
 		}
 
-		log, e := Git(root, "log", "--format=%H", "--follow", "--", impl)
+		log, e := runner.Run(root, "log", "--format=%H", "--follow", "--", impl)
 		if e != nil {
 			return nil, e
 		}
+		ids := strings.Fields(log)
+		if err := loadCommitDiffs(root, ids, diffs, runner); err != nil {
+			return nil, err
+		}
 		changed := map[string][]string{}
-		for _, id := range strings.Fields(log) {
-			files, err := Git(root, "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", id)
-			if err != nil {
-				return nil, err
-			}
-			for _, p := range strings.Split(files, "\n") {
+		for _, id := range ids {
+			for _, p := range strings.Split(diffs[id], "\n") {
 				changed[p] = append(changed[p], id)
 			}
 		}
@@ -122,6 +128,48 @@ func DiscoverTests(root string, implementations []string, ctagsPath string, warn
 		out = append(out, *c)
 	}
 	return out, nil
+}
+
+// loadCommitDiffs reuses successful results across implementations and reports
+// errors in commit order, independent of worker completion order.
+func loadCommitDiffs(root string, ids []string, cache map[string]string, runner GitRunner) error {
+	var missing []string
+	seen := make(map[string]bool)
+	for _, id := range ids {
+		if _, ok := cache[id]; !ok && !seen[id] {
+			missing = append(missing, id)
+			seen[id] = true
+		}
+	}
+	type result struct {
+		files string
+		err   error
+	}
+	results := make([]result, len(missing))
+	jobs := make(chan int)
+	var workers sync.WaitGroup
+	count := min(8, len(missing))
+	for i := 0; i < count; i++ {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			for i := range jobs {
+				results[i].files, results[i].err = runner.Run(root, "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", missing[i])
+			}
+		}()
+	}
+	for i := range missing {
+		jobs <- i
+	}
+	close(jobs)
+	workers.Wait()
+	for i, id := range missing {
+		if results[i].err != nil {
+			return results[i].err
+		}
+		cache[id] = results[i].files
+	}
+	return nil
 }
 
 func containsIdentifier(line, name string) bool {
