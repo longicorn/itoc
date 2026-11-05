@@ -10,7 +10,7 @@ See the [product requirements](docs/prd.md) for the current direction.
 
 ## Installation
 
-Install Go 1.23 or later and Git, then build and install the CLI from the repository root:
+Install Go 1.26 or later and Git, then build and install the CLI from the repository root:
 
 ```sh
 go install .
