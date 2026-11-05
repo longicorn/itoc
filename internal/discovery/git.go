@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 type GitRunner interface {
@@ -15,6 +16,8 @@ type GitRunner interface {
 type execGitRunner struct{}
 
 func (execGitRunner) Run(dir string, args ...string) (string, error) { return Git(dir, args...) }
+
+func NewGitPathLister(runner GitRunner) GitPathLister { return GitPathLister{runner: runner} }
 
 type GitPathLister struct{ runner GitRunner }
 
@@ -46,15 +49,49 @@ func (l GitPathLister) List(input string) ([]Evidence, string, error) {
 		return nil, "", err
 	}
 	ids := strings.Fields(log)
-	commits := make([]commitSnapshot, 0, len(ids))
-	for _, id := range ids {
-		message, _ := l.run(root, "show", "-s", "--format=%s%n%b", id)
-		files, err := l.run(root, "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", id)
-		if err != nil {
-			continue
+	messages := map[string]string{}
+	if len(ids) > 0 {
+		args := append([]string{"show", "-s", "--format=%H%x00%s%n%b%x00"}, ids...)
+		if output, err := l.run(root, args...); err == nil {
+			parts := strings.Split(output, "\x00")
+			for i := 0; i+1 < len(parts); i += 2 {
+				messages[strings.TrimSpace(parts[i])] = parts[i+1]
+			}
 		}
-		commits = append(commits, commitSnapshot{id: id, message: message, files: files})
 	}
+	commits := make([]commitSnapshot, len(ids))
+	valid := make([]bool, len(ids))
+	jobs := make(chan int)
+	var workers sync.WaitGroup
+	count := 8
+	if len(ids) < count {
+		count = len(ids)
+	}
+	for i := 0; i < count; i++ {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			for i := range jobs {
+				files, err := l.run(root, "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", ids[i])
+				if err == nil {
+					commits[i] = commitSnapshot{id: ids[i], message: messages[ids[i]], files: files}
+					valid[i] = true
+				}
+			}
+		}()
+	}
+	for i := range ids {
+		jobs <- i
+	}
+	close(jobs)
+	workers.Wait()
+	ordered := commits[:0]
+	for i, commit := range commits {
+		if valid[i] {
+			ordered = append(ordered, commit)
+		}
+	}
+	commits = ordered
 	cs := collectCochangeEvidence(target, commits)
 	evidence := make([]Evidence, 0, len(cs))
 	for _, item := range cs {

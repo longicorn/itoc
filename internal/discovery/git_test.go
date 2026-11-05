@@ -31,8 +31,7 @@ func TestGitPathListerCollectsCochangeEvidence(t *testing.T) {
 		"rev-parse --show-toplevel":                         "/repo\n",
 		"ls-files --full-name -- docs/alpha.md":             "docs/alpha.md\n",
 		"log --follow --format=%H -- docs/alpha.md":         "c1\nc2\n",
-		"show -s --format=%s%n%b c1":                        "refactor module\n",
-		"show -s --format=%s%n%b c2":                        "feature update\n",
+		"show -s --format=%H%x00%s%n%b%x00 c1 c2":           "c1\x00refactor module\n\x00\nc2\x00feature update\n\x00\n",
 		"diff-tree --root --no-commit-id --name-only -r c1": "docs/alpha.md\nsrc/alpha.go\nREADME.md\n",
 		"diff-tree --root --no-commit-id --name-only -r c2": "docs/alpha.md\nsrc/alpha.go\nsrc/beta_test.go\n",
 	}}
