@@ -2,22 +2,14 @@
 
 ## Status
 
-Accepted. The deleted-input policy below is not yet fully enforced by the implementation.
-
-## Context
-
-The [PRD](prd.md) calls for inspectable Git evidence to find potentially related artifacts. A co-change is a clue, not proof of a semantic relationship. Bulk changes and unrelated work in a commit can produce misleading candidates; consumers decide relevance.
+Accepted. Relocation discovery is a first implementation to evaluate.
 
 ## Decision
 
-Discover candidates from commits affecting a tracked repository path. A deleted input path is out of scope. For a moved or renamed target, start from its current destination and follow its history. Retain supporting commit IDs and noise evidence for analysis rather than treating co-change as confirmation.
+For an existing tracked input, collect co-change evidence from current-path Git history. `--follow` enables Git rename-following history for primary and test discovery; it is disabled by default. Commit messages and changed paths provide inspectable clues, not proof of a relationship. A failed message retrieval leaves no message evidence; a failed diff skips that commit.
 
-Resolve the repository root and input to a repository-relative tracked path, then use `git log --follow` to obtain its commit IDs. For each commit, collect its subject and body and the paths reported by `git diff-tree --root --no-commit-id --name-only -r`. Include supported code and document paths, excluding the target itself, and count each path at most once per commit. Aggregate evidence by path, retaining commit IDs, co-change evidence, and noise terms derived from messages and paths. Noise scoring and candidate interpretation are described in [analysis](../../analysis/prd.md).
+For an input missing from the working tree, retrieve its most recent historical content and compare tracked current code and document files. Record matching filenames, identical contents, and shared Ctags definitions as separate relocation clues, retaining multiple candidates. Symbol matches are limited to code with the same extension. Missing Ctags produces a warning. No match does not prove deletion; historical content must be available. The results are relocation candidates, not co-change history. Future tree-sitter use requires evaluation.
 
-Git execution is injectable; by default the adapter invokes the `git` executable. Failure to resolve the repository, resolve the target, or obtain the log fails discovery. A message retrieval failure leaves that commit without message evidence; a diff-tree failure skips that commit. These behaviors can result in incomplete evidence.
+## Limitations
 
-## Consequences and limitations
-
-History and supported path types bound the results. Co-changes can be unrelated, and relevant files may never have changed in the same commit. `--follow` traces the target history, but the exclusion compares changed paths with the current target path; an earlier name can therefore appear as a candidate. The adapter does not collect diffs, authors, chronology, branch, pull-request or work-item context as evidence.
-
-The current target resolution uses `git ls-files` without verifying that the path exists in the working tree. A tracked path deleted from the working tree can therefore still be accepted, contrary to the deleted-input policy. Enforcement remains to be implemented. Scoring and classification are separate from discovery.
+Default history does not follow earlier names. Ctags may miss symbols or match unrelated names. Matching is limited to tracked files and does not identify every move or split. Git execution remains required in this phase. Optional follow uses Git CLI and does not turn symbol matches into confirmed moves. Ranking and scoring are separate from discovery.

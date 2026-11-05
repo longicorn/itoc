@@ -31,4 +31,8 @@ Literal matching is straightforward to inspect but can miss alternate terminolog
 
 ## Experimental connection
 
-Use `git grep` for literal content matches in tracked files. Automatically select a single path or prompt for a numbered selection when several match, then pass the path to discovery. Display the list and prompt on stderr. Stop when no paths match. Non-Git support and path matching are deferred. This is an experiment; the result model and selection interface remain open to redesign.
+Search literal content in tracked working-tree files. Automatically select a single path or prompt for a numbered selection when several match, then pass the path to discovery. Display the list and prompt on stderr. Stop when no paths match. Non-Git support and path matching are deferred. This is an experiment; the result model and selection interface remain open to redesign.
+
+## Tracked-file search direction
+
+Enumerate tracked paths and search working-tree contents for the literal keyword in application code instead of invoking `git grep`. Retain selection and no-match behavior; untracked and missing files are excluded.
