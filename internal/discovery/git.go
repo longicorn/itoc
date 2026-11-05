@@ -41,17 +41,19 @@ func (execGitRunner) RunInput(dir, input string, args ...string) (string, error)
 func NewGitPathLister(runner GitRunner) GitPathLister { return GitPathLister{runner: runner} }
 
 type GitPathLister struct {
-	runner    GitRunner
-	follow    bool
-	ctagsPath string
-	warnings  io.Writer
+	AllowDeleted bool
+	relocation   bool
+	runner       GitRunner
+	follow       bool
+	ctagsPath    string
+	warnings     io.Writer
 }
 
 func (l GitPathLister) WithFollow(follow bool) GitPathLister { l.follow = follow; return l }
 
 // WithRelocation enables symbol clues when Ctags is available.
 func (l GitPathLister) WithRelocation(ctagsPath string, warnings io.Writer) GitPathLister {
-	l.ctagsPath, l.warnings = ctagsPath, warnings
+	l.ctagsPath, l.warnings, l.relocation = ctagsPath, warnings, true
 	return l
 }
 
@@ -75,12 +77,12 @@ func (l GitPathLister) List(input string) ([]Evidence, string, error) {
 
 	target, err := resolveGitTarget(cwd, root, input, l)
 	if err != nil {
-		if !errors.Is(err, errPathNotTracked) {
+		if !errors.Is(err, errPathNotTracked) || !l.relocation || l.AllowDeleted {
 			return nil, "", err
 		}
 		return l.findRelocations(cwd, root, input)
 	}
-	if _, statErr := os.Stat(filepath.Join(root, filepath.FromSlash(target))); os.IsNotExist(statErr) {
+	if _, statErr := os.Stat(filepath.Join(root, filepath.FromSlash(target))); os.IsNotExist(statErr) && !l.AllowDeleted {
 		return l.findRelocations(cwd, root, input)
 	}
 
@@ -247,8 +249,34 @@ func resolveGitTarget(cwd, root, input string, l GitPathLister) (string, error) 
 			break
 		}
 	}
+	if l.AllowDeleted {
+		abs, err := filepath.Abs(filepath.Join(cwd, input))
+		if filepath.IsAbs(input) {
+			abs, err = filepath.Abs(input)
+		}
+		if err != nil {
+			return "", err
+		}
+		rel, err := filepath.Rel(root, abs)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return "", fmt.Errorf("path is outside repository: %s", input)
+		}
+		if target == "" {
+			target = filepath.ToSlash(rel)
+			history, err := l.run(root, "log", "--follow", "--format=%H", "--", ":(literal)"+target)
+			if err != nil {
+				return "", err
+			}
+			if strings.TrimSpace(history) == "" {
+				return "", fmt.Errorf("path has no Git history: %s", input)
+			}
+		}
+	}
 	if target == "" {
 		return "", fmt.Errorf("%w: %s", errPathNotTracked, input)
+	}
+	if _, err := os.Lstat(filepath.Join(root, target)); err != nil && !(l.AllowDeleted && os.IsNotExist(err)) {
+		return "", fmt.Errorf("cannot access tracked path %s: %w", input, err)
 	}
 	return filepath.ToSlash(target), nil
 }

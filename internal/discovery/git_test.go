@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -79,16 +80,19 @@ func TestCollectCochangeEvidenceDeduplicatesWithinCommit(t *testing.T) {
 }
 
 func TestResolveGitTargetTrackedAndDeleted(t *testing.T) {
+	root := t.TempDir()
+	os.MkdirAll(filepath.Join(root, "docs"), 0755)
+	os.WriteFile(filepath.Join(root, "docs/a.md"), nil, 0644)
 	runner := scriptedGitRunner{responses: map[string]string{
 		"ls-files --full-name -- docs/a.md":    "docs/a.md\n",
-		"ls-files --full-name -- docs/gone.md": "",
+		"ls-files --full-name -- docs/gone.md": "docs/gone.md\n",
 	}}
-	tracked, err := resolveGitTarget("/repo", "/repo", "docs/a.md", GitPathLister{runner: runner})
+	tracked, err := resolveGitTarget(root, root, "docs/a.md", GitPathLister{runner: runner})
 	if err != nil || tracked != "docs/a.md" {
 		t.Fatalf("tracked target=%q err=%v", tracked, err)
 	}
-	if _, err := resolveGitTarget("/repo", "/repo", "docs/gone.md", GitPathLister{runner: runner}); err == nil || !strings.Contains(err.Error(), "not tracked") {
-		t.Fatalf("deleted target error=%v, want untracked path error", err)
+	if _, err := resolveGitTarget(root, root, "docs/gone.md", GitPathLister{runner: runner}); err == nil || !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("deleted target error=%v, want missing path error", err)
 	}
 }
 

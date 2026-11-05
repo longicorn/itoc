@@ -9,6 +9,7 @@ Help users find candidate artifacts related to a repository path using inspectab
 Use commits affecting the target to identify supported code and document paths changed alongside it. Retain the supporting commits and message-derived noise evidence for downstream analysis and classification. Exclude the target itself and count a path at most once per commit.
 
 A historical path may be used to seek current relocation candidates. History following is optional and disabled by default.
+`--allow-deleted` enables Git history discovery for a missing path instead of relocation discovery.
 
 ## Current implementation
 

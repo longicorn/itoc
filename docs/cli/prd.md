@@ -22,3 +22,5 @@ The executable accepts one repository file path. It validates the output format,
 Noise rules hide candidates above the default threshold; `--show-noisy` and `--max-noise-score` adjust this. `--verbose` exposes detailed evidence. Errors are printed to stderr and cause an unsuccessful exit.
 
 The experimental `--search` entry point can find a starting path from a keyword; its behavior and open questions are described in the [keyword search PRD](../keyword/prd.md).
+
+`--allow-deleted` permits Git history discovery for a deleted input. Document discovery cannot be combined with a deleted input.
