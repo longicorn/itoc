@@ -1,14 +1,15 @@
 package discovery
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"itoc/internal/discovery/ctags"
 )
@@ -50,6 +51,7 @@ func discoverTests(root string, implementations []string, ctagsPath string, warn
 		}
 		return nil
 	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -61,6 +63,7 @@ func discoverTests(root string, implementations []string, ctagsPath string, warn
 		}
 		contents[p] = b
 	}
+
 	byPath := map[string]*Evidence{}
 	add := func(p, detail string) {
 		item := byPath[p]
@@ -76,6 +79,7 @@ func discoverTests(root string, implementations []string, ctagsPath string, warn
 		if st, e := os.Stat(abs); e != nil || !st.Mode().IsRegular() {
 			continue
 		}
+
 		stem := strings.TrimSuffix(filepath.Base(impl), filepath.Ext(impl))
 		names := map[string]bool{}
 		if ctagsPath != "" {
@@ -99,7 +103,8 @@ func discoverTests(root string, implementations []string, ctagsPath string, warn
 			return nil, e
 		}
 		ids := strings.Fields(log)
-		if err := loadCommitDiffs(root, ids, diffs, runner); err != nil {
+		err := loadCommitDiffs(root, ids, diffs, runner)
+		if err != nil {
 			return nil, err
 		}
 		changed := map[string][]string{}
@@ -114,27 +119,53 @@ func discoverTests(root string, implementations []string, ctagsPath string, warn
 			ordered = append(ordered, n)
 		}
 		sort.Strings(ordered)
-		for _, p := range tests {
-			testStem := strings.TrimSuffix(filepath.Base(p), filepath.Ext(p))
-			normalized := strings.TrimSuffix(strings.TrimPrefix(testStem, "test_"), "_test")
-			normalized = strings.TrimSuffix(normalized, "_spec")
-			normalized = strings.TrimSuffix(normalized, ".test")
-			normalized = strings.TrimSuffix(normalized, ".spec")
-			if stem == normalized && filepath.Ext(p) == filepath.Ext(impl) {
-				add(p, fmt.Sprintf("test filename matches implementation %s", impl))
-			}
-			for _, id := range changed[p] {
-				add(p, fmt.Sprintf("Git co-change with implementation %s in commit %s", impl, id))
-			}
-			lines := bytes.Split(contents[p], []byte("\n"))
-			for i, line := range lines {
-				for _, n := range ordered {
-					if containsIdentifier(string(line), n) {
-						add(p, fmt.Sprintf("textual identifier %q from %s at %s:%d", n, impl, p, i+1))
-					}
+		matcher := newIdentifierMatcher(ordered)
+		// Bound the number of retained results and merge them in test order.
+		for first := 0; first < len(tests); first += 32 {
+			end := min(first+32, len(tests))
+			batch := tests[first:end]
+			matches := make([][]identifierMatch, len(batch))
+
+			if len(matcher.states) > 1 {
+				jobs := make(chan int)
+				var workers sync.WaitGroup
+				count := min(8, runtime.GOMAXPROCS(0), len(batch))
+				for i := 0; i < count; i++ {
+					workers.Add(1)
+					go func() {
+						defer workers.Done()
+						for index := range jobs {
+							matches[index] = matcher.find(contents[batch[index]])
+						}
+					}()
 				}
+				for i := range batch {
+					jobs <- i
+				}
+				close(jobs)
+				workers.Wait()
+			}
+
+			for index, p := range batch {
+				testStem := strings.TrimSuffix(filepath.Base(p), filepath.Ext(p))
+				normalized := strings.TrimSuffix(strings.TrimPrefix(testStem, "test_"), "_test")
+				normalized = strings.TrimSuffix(normalized, "_spec")
+				normalized = strings.TrimSuffix(normalized, ".test")
+				normalized = strings.TrimSuffix(normalized, ".spec")
+				if stem == normalized && filepath.Ext(p) == filepath.Ext(impl) {
+					add(p, fmt.Sprintf("test filename matches implementation %s", impl))
+				}
+				for _, id := range changed[p] {
+					add(p, fmt.Sprintf("Git co-change with implementation %s in commit %s", impl, id))
+				}
+
+				for _, match := range matches[index] {
+					add(p, fmt.Sprintf("textual identifier %q from %s at %s:%d", match.name, impl, p, match.line))
+				}
+
 			}
 		}
+
 	}
 	out := make([]Evidence, 0, len(byPath))
 	for _, c := range byPath {
@@ -175,6 +206,11 @@ func loadCommitDiffs(root string, ids []string, cache map[string]string, runner 
 		cache[parts[i]] = strings.TrimPrefix(parts[i+1], "\n\n")
 	}
 	return nil
+}
+
+type identifierMatch struct {
+	line int
+	name string
 }
 
 func containsIdentifier(line, name string) bool {
